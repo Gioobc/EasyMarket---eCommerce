@@ -65,9 +65,9 @@ export default function HistoryScreen() {
     return (
       <View style={styles.centered}>
         <Ionicons name="receipt-outline" size={72} color={Colors.border} />
-        <Text style={styles.emptyTitle}>No orders yet</Text>
-        <Text style={styles.emptySubtitle}>Sign in to view your purchase history</Text>
-        <Button title="Sign In" onPress={() => router.push('/auth/login')} style={styles.btn} />
+        <Text style={styles.emptyTitle}>No hay pedidos aún</Text>
+        <Text style={styles.emptySubtitle}>Inicia sesión para ver tu historial de compras</Text>
+        <Button title="Iniciar sesión" onPress={() => router.push('/auth/login')} style={styles.btn} />
       </View>
     );
   }
@@ -121,7 +121,7 @@ export default function HistoryScreen() {
 
             <View style={styles.orderFooter}>
               <Text style={styles.itemCount}>
-                {item.items.reduce((s, i) => s + i.quantity, 0)} items
+                {item.items.reduce((s, i) => s + i.quantity, 0)} artículos
               </Text>
               <Text style={styles.orderTotal}>${item.total.toFixed(2)}</Text>
             </View>
@@ -130,11 +130,11 @@ export default function HistoryScreen() {
         ListEmptyComponent={
           <View style={styles.centered}>
             <Ionicons name="receipt-outline" size={72} color={Colors.border} />
-            <Text style={styles.emptyTitle}>No orders yet</Text>
-            <Text style={styles.emptySubtitle}>Your purchase history will appear here</Text>
+            <Text style={styles.emptyTitle}>No hay pedidos aún</Text>
+            <Text style={styles.emptySubtitle}>Tu historial de compras aparecerá aquí</Text>
             <Button
-              title="Start Shopping"
-              onPress={() => router.push('/(tabs)/')}
+              title="Comenzar a comprar"
+              onPress={() => router.push('/(tabs)')}
               style={styles.btn}
             />
           </View>

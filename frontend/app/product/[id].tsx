@@ -38,9 +38,9 @@ export default function ProductDetailScreen() {
 
   const handleAddToCart = async () => {
     if (!user) {
-      Alert.alert('Sign in required', 'Please sign in to add items to your cart.', [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Sign In', onPress: () => router.push('/auth/login') },
+      Alert.alert('Se requiere inicio de sesión', 'Por favor, inicia sesión para agregar artículos a tu carrito.', [
+        { text: 'Cancelar', style: 'cancel' },
+        { text: 'Iniciar sesión', onPress: () => router.push('/auth/login') },
       ]);
       return;
     }
@@ -48,9 +48,9 @@ export default function ProductDetailScreen() {
     try {
       setAddingToCart(true);
       await addItem(product.id, qty);
-      Alert.alert('Added to cart!', `${product.name} (×${qty}) added to your cart.`, [
-        { text: 'Continue Shopping', style: 'cancel' },
-        { text: 'View Cart', onPress: () => router.push('/(tabs)/cart') },
+      Alert.alert('Agregado al carrito!', `${product.name} (×${qty}) agregado a tu carrito.`, [
+        { text: 'Seguir comprando', style: 'cancel' },
+        { text: 'Ver carrito', onPress: () => router.push('/(tabs)/cart') },
       ]);
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : 'Failed to add item';
@@ -72,8 +72,8 @@ export default function ProductDetailScreen() {
     return (
       <View style={styles.centered}>
         <Ionicons name="alert-circle-outline" size={60} color={Colors.border} />
-        <Text style={styles.errorText}>Product not found</Text>
-        <Button title="Go Back" onPress={() => router.back()} style={{ marginTop: 16 }} />
+        <Text style={styles.errorText}>Producto no encontrado</Text>
+        <Button title="Volver" onPress={() => router.back()} style={{ marginTop: 16 }} />
       </View>
     );
   }
@@ -81,7 +81,7 @@ export default function ProductDetailScreen() {
   return (
     <SafeAreaView style={styles.container} edges={['bottom']}>
       <ScrollView showsVerticalScrollIndicator={false}>
-        <Image source={{ uri: product.image }} style={styles.image} resizeMode="cover" />
+        <Image source={{ uri: product.image }} style={styles.image} resizeMode="contain" />
 
         <View style={styles.content}>
           <View style={styles.categoryRow}>
@@ -108,13 +108,13 @@ export default function ProductDetailScreen() {
                 { color: product.stock > 0 ? Colors.secondary : Colors.danger },
               ]}
             >
-              {product.stock > 0 ? `${product.stock} in stock` : 'Out of stock'}
+              {product.stock > 0 ? `${product.stock} disponibles` : 'Agotado'}
             </Text>
           </View>
 
           {/* Quantity selector */}
           <View style={styles.qtySection}>
-            <Text style={styles.qtyLabel}>Quantity</Text>
+            <Text style={styles.qtyLabel}>Cantidad</Text>
             <View style={styles.qtyRow}>
               <TouchableOpacity
                 style={styles.qtyBtn}
@@ -145,7 +145,7 @@ export default function ProductDetailScreen() {
           <Text style={styles.subtotalAmount}>${(product.price * qty).toFixed(2)}</Text>
         </View>
         <Button
-          title="Add to Cart"
+          title="Agregar al carrito"
           onPress={handleAddToCart}
           loading={addingToCart}
           disabled={product.stock === 0}
@@ -171,8 +171,9 @@ const styles = StyleSheet.create({
   },
   image: {
     width: '100%',
-    height: 280,
+    height: 360,
     backgroundColor: Colors.border,
+    alignSelf: 'center',
   },
   content: {
     padding: 20,

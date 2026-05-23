@@ -27,16 +27,16 @@ export default function LoginScreen() {
 
   const handleLogin = async () => {
     if (!email.trim() || !password) {
-      Alert.alert('Validation', 'Please enter your email and password');
+      Alert.alert('Validación', 'Por favor ingresa tu correo y contraseña');
       return;
     }
     try {
       setLoading(true);
       await login(email.trim().toLowerCase(), password);
-      router.replace('/(tabs)/');
+      router.replace('/(tabs)');
     } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : 'Login failed';
-      Alert.alert('Sign In Failed', msg);
+      const msg = e instanceof Error ? e.message : 'Error al iniciar sesión';
+      Alert.alert('Error', msg);
     } finally {
       setLoading(false);
     }
@@ -55,12 +55,12 @@ export default function LoginScreen() {
               <Ionicons name="storefront" size={40} color="#fff" />
             </View>
             <Text style={styles.title}>EasyMarket</Text>
-            <Text style={styles.subtitle}>Sign in to your account</Text>
+            <Text style={styles.subtitle}>Inicia sesión en tu cuenta</Text>
           </View>
 
           <View style={styles.form}>
             <Input
-              label="Email"
+              label="Correo electrónico"
               value={email}
               onChangeText={setEmail}
               placeholder="you@example.com"
@@ -70,10 +70,10 @@ export default function LoginScreen() {
             />
             <View style={styles.passwordWrapper}>
               <Input
-                label="Password"
+                label="Contraseña"
                 value={password}
                 onChangeText={setPassword}
-                placeholder="Your password"
+                placeholder="Tu contraseña"
                 secureTextEntry={!showPwd}
                 style={{ paddingRight: 44 }}
               />
@@ -90,7 +90,7 @@ export default function LoginScreen() {
             </View>
 
             <Button
-              title="Sign In"
+              title="Iniciar sesión"
               onPress={handleLogin}
               loading={loading}
               fullWidth
@@ -99,7 +99,7 @@ export default function LoginScreen() {
 
             <View style={styles.divider}>
               <View style={styles.dividerLine} />
-              <Text style={styles.dividerText}>or</Text>
+              <Text style={styles.dividerText}>o</Text>
               <View style={styles.dividerLine} />
             </View>
 
@@ -108,8 +108,8 @@ export default function LoginScreen() {
               onPress={() => router.replace('/auth/register')}
             >
               <Text style={styles.registerText}>
-                Don't have an account?{' '}
-                <Text style={styles.registerBold}>Create one</Text>
+                ¿No tienes una cuenta?{' '}
+                <Text style={styles.registerBold}>Crear una cuenta</Text>
               </Text>
             </TouchableOpacity>
           </View>

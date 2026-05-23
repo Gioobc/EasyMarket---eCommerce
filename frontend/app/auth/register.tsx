@@ -31,11 +31,11 @@ export default function RegisterScreen() {
 
   const validate = () => {
     const errs: Record<string, string> = {};
-    if (!name.trim()) errs.name = 'Name is required';
-    if (!email.trim()) errs.email = 'Email is required';
-    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) errs.email = 'Invalid email address';
-    if (!password) errs.password = 'Password is required';
-    else if (password.length < 6) errs.password = 'Password must be at least 6 characters';
+    if (!name.trim()) errs.name = 'El nombre es obligatorio';
+    if (!email.trim()) errs.email = 'El correo es obligatorio';
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) errs.email = 'Correo inválido';
+    if (!password) errs.password = 'La contraseña es obligatoria';
+    else if (password.length < 6) errs.password = 'La contraseña debe tener al menos 6 caracteres';
     setErrors(errs);
     return Object.keys(errs).length === 0;
   };
@@ -51,10 +51,10 @@ export default function RegisterScreen() {
         phone: phone.trim() || undefined,
         address: address.trim() || undefined,
       });
-      router.replace('/(tabs)/');
+      router.replace('/(tabs)');
     } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : 'Registration failed';
-      Alert.alert('Registration Failed', msg);
+      const msg = e instanceof Error ? e.message : 'Error en el registro';
+      Alert.alert('Error', msg);
     } finally {
       setLoading(false);
     }
@@ -72,23 +72,23 @@ export default function RegisterScreen() {
             <View style={styles.logoBox}>
               <Ionicons name="storefront" size={40} color="#fff" />
             </View>
-            <Text style={styles.title}>Create Account</Text>
-            <Text style={styles.subtitle}>Join EasyMarket today</Text>
+            <Text style={styles.title}>Crear cuenta</Text>
+            <Text style={styles.subtitle}>Regístrate en EasyMarket</Text>
           </View>
 
           <View style={styles.form}>
             <Input
-              label="Full Name *"
+              label="Nombre completo *"
               value={name}
               onChangeText={setName}
-              placeholder="John Doe"
+              placeholder="Juan Pérez"
               error={errors.name}
             />
             <Input
-              label="Email *"
+              label="Correo electrónico *"
               value={email}
               onChangeText={setEmail}
-              placeholder="you@example.com"
+              placeholder="tu@ejemplo.com"
               keyboardType="email-address"
               autoCapitalize="none"
               autoCorrect={false}
@@ -96,10 +96,10 @@ export default function RegisterScreen() {
             />
             <View style={styles.passwordWrapper}>
               <Input
-                label="Password *"
+                label="Contraseña *"
                 value={password}
                 onChangeText={setPassword}
-                placeholder="At least 6 characters"
+                placeholder="Al menos 6 caracteres"
                 secureTextEntry={!showPwd}
                 style={{ paddingRight: 44 }}
                 error={errors.password}
@@ -116,23 +116,23 @@ export default function RegisterScreen() {
               </TouchableOpacity>
             </View>
             <Input
-              label="Phone (optional)"
+              label="Teléfono (opcional)"
               value={phone}
               onChangeText={setPhone}
-              placeholder="+1 234 567 8900"
+              placeholder="+34 600 000 000"
               keyboardType="phone-pad"
             />
             <Input
-              label="Shipping Address (optional)"
+              label="Dirección de envío (opcional)"
               value={address}
               onChangeText={setAddress}
-              placeholder="123 Main St, City, Country"
+              placeholder="Calle Falsa 123, Ciudad, País"
               multiline
               numberOfLines={2}
             />
 
             <Button
-              title="Create Account"
+              title="Crear cuenta"
               onPress={handleRegister}
               loading={loading}
               fullWidth
@@ -141,7 +141,7 @@ export default function RegisterScreen() {
 
             <View style={styles.divider}>
               <View style={styles.dividerLine} />
-              <Text style={styles.dividerText}>or</Text>
+              <Text style={styles.dividerText}>o</Text>
               <View style={styles.dividerLine} />
             </View>
 
@@ -150,8 +150,8 @@ export default function RegisterScreen() {
               onPress={() => router.replace('/auth/login')}
             >
               <Text style={styles.loginText}>
-                Already have an account?{' '}
-                <Text style={styles.loginBold}>Sign In</Text>
+                ¿Ya tienes una cuenta?{' '}
+                <Text style={styles.loginBold}>Iniciar sesión</Text>
               </Text>
             </TouchableOpacity>
           </View>

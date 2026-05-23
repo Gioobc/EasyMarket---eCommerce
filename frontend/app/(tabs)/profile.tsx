@@ -33,11 +33,11 @@ export default function ProfileScreen() {
     return (
       <SafeAreaView style={styles.centered} edges={['bottom']}>
         <Ionicons name="person-circle-outline" size={80} color={Colors.border} />
-        <Text style={styles.guestTitle}>Welcome to EasyMarket</Text>
-        <Text style={styles.guestSubtitle}>Sign in to manage your account</Text>
-        <Button title="Sign In" onPress={() => router.push('/auth/login')} style={styles.btn} />
+        <Text style={styles.guestTitle}>Bienvenido a EasyMarket</Text>
+        <Text style={styles.guestSubtitle}>Inicia sesión para gestionar tu cuenta</Text>
+        <Button title="Iniciar sesión" onPress={() => router.push('/auth/login')} style={styles.btn} />
         <TouchableOpacity onPress={() => router.push('/auth/register')} style={styles.registerLink}>
-          <Text style={styles.registerLinkText}>Don't have an account? Register</Text>
+          <Text style={styles.registerLinkText}>¿No tienes una cuenta? Regístrate</Text>
         </TouchableOpacity>
       </SafeAreaView>
     );
@@ -70,9 +70,9 @@ export default function ProfileScreen() {
   };
 
   const handleLogout = () => {
-    Alert.alert('Sign Out', 'Are you sure you want to sign out?', [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Sign Out', style: 'destructive', onPress: logout },
+    Alert.alert('Cerrar sesión', '¿Estás seguro de que quieres cerrar sesión?', [
+      { text: 'Cancelar', style: 'cancel' },
+      { text: 'Cerrar sesión', style: 'destructive', onPress: logout },
     ]);
   };
 
@@ -101,11 +101,11 @@ export default function ProfileScreen() {
         {/* Info card */}
         <View style={styles.card}>
           <View style={styles.cardHeader}>
-            <Text style={styles.cardTitle}>Account Information</Text>
+              <Text style={styles.cardTitle}>Información de la cuenta</Text>
             {!editing && (
               <TouchableOpacity onPress={() => setEditing(true)} style={styles.editBtn}>
                 <Ionicons name="pencil" size={16} color={Colors.primary} />
-                <Text style={styles.editBtnText}>Edit</Text>
+                <Text style={styles.editBtnText}>Editar</Text>
               </TouchableOpacity>
             )}
           </View>
@@ -113,46 +113,46 @@ export default function ProfileScreen() {
           {editing ? (
             <>
               <Input
-                label="Full Name"
+                label="Nombre completo"
                 value={name}
                 onChangeText={setName}
-                placeholder="Your full name"
+                placeholder="Tu nombre completo"
               />
               <Input
-                label="Phone"
+                label="Teléfono"
                 value={phone}
                 onChangeText={setPhone}
-                placeholder="Phone number"
+                placeholder="Número de teléfono"
                 keyboardType="phone-pad"
               />
               <Input
-                label="Address"
+                label="Dirección"
                 value={address}
                 onChangeText={setAddress}
-                placeholder="Shipping address"
+                placeholder="Dirección de envío"
                 multiline
                 numberOfLines={2}
               />
 
-              <Text style={styles.sectionLabel}>Change Password (optional)</Text>
+              <Text style={styles.sectionLabel}>Cambiar contraseña (opcional)</Text>
               <Input
-                label="Current Password"
+                label="Contraseña actual"
                 value={currentPassword}
                 onChangeText={setCurrentPassword}
                 secureTextEntry
-                placeholder="Current password"
+                placeholder="Contraseña actual"
               />
               <Input
-                label="New Password"
+                label="Nueva contraseña"
                 value={newPassword}
                 onChangeText={setNewPassword}
                 secureTextEntry
-                placeholder="New password"
+                placeholder="Nueva contraseña"
               />
 
               <View style={styles.editActions}>
                 <Button
-                  title="Cancel"
+                  title="Cancelar"
                   variant="outline"
                   onPress={() => {
                     setEditing(false);
@@ -165,7 +165,7 @@ export default function ProfileScreen() {
                   style={styles.actionBtn}
                 />
                 <Button
-                  title="Save"
+                  title="Guardar"
                   onPress={handleSave}
                   loading={saving}
                   style={styles.actionBtn}
@@ -174,18 +174,18 @@ export default function ProfileScreen() {
             </>
           ) : (
             <>
-              <ProfileRow icon="person-outline" label="Name" value={user.name} />
-              <ProfileRow icon="mail-outline" label="Email" value={user.email} />
-              <ProfileRow icon="call-outline" label="Phone" value={user.phone || '—'} />
-              <ProfileRow icon="location-outline" label="Address" value={user.address || '—'} />
+                  <ProfileRow icon="person-outline" label="Nombre" value={user.name} />
+                  <ProfileRow icon="mail-outline" label="Correo" value={user.email} />
+                  <ProfileRow icon="call-outline" label="Teléfono" value={user.phone || '—'} />
+                  <ProfileRow icon="location-outline" label="Dirección" value={user.address || '—'} />
             </>
           )}
         </View>
 
         {/* Sign out */}
         <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout}>
-          <Ionicons name="log-out-outline" size={20} color={Colors.danger} />
-          <Text style={styles.logoutText}>Sign Out</Text>
+              <Ionicons name="log-out-outline" size={20} color={Colors.danger} />
+                <Text style={styles.logoutText}>Cerrar sesión</Text>
         </TouchableOpacity>
       </ScrollView>
     </KeyboardAvoidingView>

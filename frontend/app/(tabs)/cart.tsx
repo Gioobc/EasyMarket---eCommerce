@@ -26,33 +26,33 @@ export default function CartScreen() {
 
   const handleCheckout = async () => {
     if (!user) {
-      Alert.alert('Sign in required', 'Please sign in to complete your purchase.', [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Sign In', onPress: () => router.push('/auth/login') },
+      Alert.alert('Se requiere inicio de sesión', 'Por favor, inicia sesión para completar tu compra.', [
+        { text: 'Cancelar', style: 'cancel' },
+        { text: 'Iniciar sesión', onPress: () => router.push('/auth/login') },
       ]);
       return;
     }
 
-    const address = user.address || 'Default Shipping Address';
+    const address = user.address || 'Dirección de envío predeterminada';
 
     Alert.alert(
-      'Confirm Order',
-      `Total: $${cart.total.toFixed(2)}\nShip to: ${address}\n\nProceed to checkout?`,
+      'Confirmar pedido',
+      `Total: $${cart.total.toFixed(2)}\nEnviar a: ${address}\n\n¿Deseas continuar con el pago?`,
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: 'Cancelar', style: 'cancel' },
         {
-          text: 'Place Order',
+          text: 'Realizar pedido',
           onPress: async () => {
             try {
               setCheckingOut(true);
               await ordersApi.checkout(address);
               await clearCart();
-              Alert.alert('Order placed!', 'Your order has been confirmed. Thank you!', [
-                { text: 'View Orders', onPress: () => router.push('/(tabs)/history') },
-                { text: 'Continue Shopping', onPress: () => router.push('/(tabs)/') },
+              Alert.alert('¡Pedido realizado!', 'Tu pedido ha sido confirmado. ¡Gracias!', [
+                { text: 'Ver pedidos', onPress: () => router.push('/(tabs)/history') },
+                { text: 'Seguir comprando', onPress: () => router.push('/(tabs)') },
               ]);
             } catch (e: unknown) {
-              const msg = e instanceof Error ? e.message : 'Checkout failed';
+              const msg = e instanceof Error ? e.message : 'Error en el pago';
               Alert.alert('Error', msg);
             } finally {
               setCheckingOut(false);
@@ -67,9 +67,9 @@ export default function CartScreen() {
     return (
       <SafeAreaView style={styles.centered} edges={['bottom']}>
         <Ionicons name="cart-outline" size={72} color={Colors.border} />
-        <Text style={styles.emptyTitle}>Your cart is empty</Text>
-        <Text style={styles.emptySubtitle}>Sign in to save items and checkout</Text>
-        <Button title="Sign In" onPress={() => router.push('/auth/login')} style={styles.btn} />
+        <Text style={styles.emptyTitle}>Tu carrito está vacío</Text>
+        <Text style={styles.emptySubtitle}>Inicia sesión para guardar artículos y pagar</Text>
+        <Button title="Iniciar sesión" onPress={() => router.push('/auth/login')} style={styles.btn} />
       </SafeAreaView>
     );
   }
@@ -86,11 +86,11 @@ export default function CartScreen() {
     return (
       <SafeAreaView style={styles.centered} edges={['bottom']}>
         <Ionicons name="cart-outline" size={72} color={Colors.border} />
-        <Text style={styles.emptyTitle}>Your cart is empty</Text>
-        <Text style={styles.emptySubtitle}>Add products to get started</Text>
+        <Text style={styles.emptyTitle}>Tu carrito está vacío</Text>
+        <Text style={styles.emptySubtitle}>Agrega productos para comenzar</Text>
         <Button
-          title="Browse Products"
-          onPress={() => router.push('/(tabs)/')}
+          title="Buscar productos"
+          onPress={() => router.push('/(tabs)')}
           style={styles.btn}
         />
       </SafeAreaView>
@@ -140,9 +140,9 @@ export default function CartScreen() {
             <TouchableOpacity
               style={styles.removeBtn}
               onPress={() =>
-                Alert.alert('Remove item', 'Remove this item from cart?', [
-                  { text: 'Cancel', style: 'cancel' },
-                  { text: 'Remove', style: 'destructive', onPress: () => removeItem(item.productId) },
+                Alert.alert('Eliminar artículo', '¿Eliminar este artículo del carrito?', [
+                  { text: 'Cancelar', style: 'cancel' },
+                  { text: 'Eliminar', style: 'destructive', onPress: () => removeItem(item.productId) },
                 ])
               }
             >
@@ -154,11 +154,11 @@ export default function CartScreen() {
 
       <View style={styles.footer}>
         <View style={styles.totalRow}>
-          <Text style={styles.totalLabel}>Total ({cart.items.reduce((s, i) => s + i.quantity, 0)} items)</Text>
+          <Text style={styles.totalLabel}>Total ({cart.items.reduce((s, i) => s + i.quantity, 0)} artículos)</Text>
           <Text style={styles.totalAmount}>${cart.total.toFixed(2)}</Text>
         </View>
         <Button
-          title={checkingOut ? 'Placing Order...' : 'Checkout'}
+          title={checkingOut ? 'Procesando pedido...' : 'Pagar'}
           onPress={handleCheckout}
           loading={checkingOut}
           fullWidth

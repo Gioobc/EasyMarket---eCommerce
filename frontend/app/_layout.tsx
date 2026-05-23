@@ -17,7 +17,7 @@ export default function RootLayout() {
             name="product/[id]"
             options={{
               headerShown: true,
-              title: 'Product Detail',
+              title: 'Detalles del Producto',
               headerBackTitle: 'Back',
             }}
           />

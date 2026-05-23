@@ -3,12 +3,14 @@ import React, { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
+  Platform,
   RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
+  useWindowDimensions,
   View,
 } from 'react-native';
 import { ProductCard } from '../../components/ProductCard';
@@ -16,13 +18,14 @@ import { Colors } from '../../constants/Colors';
 import { Product, productsApi } from '../../services/api';
 
 const SORT_OPTIONS = [
-  { label: 'Default', value: '' },
-  { label: 'Price ↑', value: 'price_asc' },
-  { label: 'Price ↓', value: 'price_desc' },
-  { label: 'Rating', value: 'rating' },
+  { label: 'Por defecto', value: '' },
+  { label: 'Precio ↑', value: 'price_asc' },
+  { label: 'Precio ↓', value: 'price_desc' },
+  { label: 'Calificación', value: 'rating' },
 ];
 
 export default function HomeScreen() {
+  const { width } = useWindowDimensions();
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
@@ -31,6 +34,10 @@ export default function HomeScreen() {
   const [selectedCategory, setSelectedCategory] = useState('');
   const [sort, setSort] = useState('');
   const [error, setError] = useState('');
+
+  const isWeb = Platform.OS === 'web';
+  const numColumns = isWeb ? 3 : 1;
+  const listMaxWidth = isWeb ? Math.min(width - 24, 1320) : width;
 
   const fetchProducts = useCallback(async () => {
     try {
@@ -68,7 +75,7 @@ export default function HomeScreen() {
     return (
       <View style={styles.centered}>
         <ActivityIndicator size="large" color={Colors.primary} />
-        <Text style={styles.loadingText}>Loading products...</Text>
+        <Text style={styles.loadingText}>Cargando productos...</Text>
       </View>
     );
   }
@@ -80,7 +87,7 @@ export default function HomeScreen() {
         <Ionicons name="search" size={18} color={Colors.textMuted} style={styles.searchIcon} />
         <TextInput
           style={styles.searchInput}
-          placeholder="Search products..."
+          placeholder="Buscar productos..."
           placeholderTextColor={Colors.textMuted}
           value={search}
           onChangeText={setSearch}
@@ -93,53 +100,95 @@ export default function HomeScreen() {
         )}
       </View>
 
-      {/* Category filter */}
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        style={styles.categoryScroll}
-        contentContainerStyle={styles.categoryContent}
-      >
-        <TouchableOpacity
-          style={[styles.chip, selectedCategory === '' && styles.chipActive]}
-          onPress={() => setSelectedCategory('')}
-        >
-          <Text style={[styles.chipText, selectedCategory === '' && styles.chipTextActive]}>
-            All
-          </Text>
-        </TouchableOpacity>
-        {categories.map((cat) => (
-          <TouchableOpacity
-            key={cat}
-            style={[styles.chip, selectedCategory === cat && styles.chipActive]}
-            onPress={() => setSelectedCategory(cat === selectedCategory ? '' : cat)}
+      <View style={styles.filtersContainer}>
+        <Text style={styles.filterTitle}>Categorías</Text>
+        {isWeb ? (
+          <View style={styles.wrapRow}>
+            <TouchableOpacity
+              style={[styles.chip, selectedCategory === '' && styles.chipActive]}
+              onPress={() => setSelectedCategory('')}
+            >
+              <Text style={[styles.chipText, selectedCategory === '' && styles.chipTextActive]}>
+                Todas
+              </Text>
+            </TouchableOpacity>
+            {categories.map((cat) => (
+              <TouchableOpacity
+                key={cat}
+                style={[styles.chip, selectedCategory === cat && styles.chipActive]}
+                onPress={() => setSelectedCategory(cat === selectedCategory ? '' : cat)}
+              >
+                <Text style={[styles.chipText, selectedCategory === cat && styles.chipTextActive]}>
+                  {cat}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        ) : (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={styles.categoryScroll}
+            contentContainerStyle={styles.categoryContent}
           >
-            <Text style={[styles.chipText, selectedCategory === cat && styles.chipTextActive]}>
-              {cat}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </ScrollView>
+            <TouchableOpacity
+              style={[styles.chip, selectedCategory === '' && styles.chipActive]}
+              onPress={() => setSelectedCategory('')}
+            >
+              <Text style={[styles.chipText, selectedCategory === '' && styles.chipTextActive]}>
+                Todas
+              </Text>
+            </TouchableOpacity>
+            {categories.map((cat) => (
+              <TouchableOpacity
+                key={cat}
+                style={[styles.chip, selectedCategory === cat && styles.chipActive]}
+                onPress={() => setSelectedCategory(cat === selectedCategory ? '' : cat)}
+              >
+                <Text style={[styles.chipText, selectedCategory === cat && styles.chipTextActive]}>
+                  {cat}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        )}
 
-      {/* Sort options */}
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        style={styles.sortScroll}
-        contentContainerStyle={styles.sortContent}
-      >
-        {SORT_OPTIONS.map((opt) => (
-          <TouchableOpacity
-            key={opt.value}
-            style={[styles.sortChip, sort === opt.value && styles.sortChipActive]}
-            onPress={() => setSort(opt.value)}
+        <Text style={styles.filterTitle}>Ordenar por</Text>
+        {isWeb ? (
+          <View style={styles.wrapRow}>
+            {SORT_OPTIONS.map((opt) => (
+              <TouchableOpacity
+                key={opt.value}
+                style={[styles.sortChip, sort === opt.value && styles.sortChipActive]}
+                onPress={() => setSort(opt.value)}
+              >
+                <Text style={[styles.sortChipText, sort === opt.value && styles.sortChipTextActive]}>
+                  {opt.label}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        ) : (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={styles.sortScroll}
+            contentContainerStyle={styles.sortContent}
           >
-            <Text style={[styles.sortChipText, sort === opt.value && styles.sortChipTextActive]}>
-              {opt.label}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </ScrollView>
+            {SORT_OPTIONS.map((opt) => (
+              <TouchableOpacity
+                key={opt.value}
+                style={[styles.sortChip, sort === opt.value && styles.sortChipActive]}
+                onPress={() => setSort(opt.value)}
+              >
+                <Text style={[styles.sortChipText, sort === opt.value && styles.sortChipTextActive]}>
+                  {opt.label}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        )}
+      </View>
 
       {error ? (
         <View style={styles.errorBox}>
@@ -149,16 +198,24 @@ export default function HomeScreen() {
       ) : null}
 
       <FlatList
+        key={`products-${numColumns}`}
         data={products}
         keyExtractor={(item) => item.id}
-        renderItem={({ item }) => <ProductCard product={item} />}
-        contentContainerStyle={styles.list}
+        numColumns={numColumns}
+        renderItem={({ item }) => (
+          <View style={numColumns > 1 ? styles.gridItem : undefined}>
+            <ProductCard product={item} compact={numColumns > 1} />
+          </View>
+        )}
+        columnWrapperStyle={numColumns > 1 ? styles.gridRow : undefined}
+        contentContainerStyle={[styles.list, { maxWidth: listMaxWidth }]}
+        style={styles.listWrapper}
         showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         ListEmptyComponent={
           <View style={styles.centered}>
             <Ionicons name="search" size={48} color={Colors.border} />
-            <Text style={styles.emptyText}>No products found</Text>
+            <Text style={styles.emptyText}>No se encontraron productos</Text>
           </View>
         }
       />
@@ -201,12 +258,29 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: Colors.textPrimary,
   },
+  filtersContainer: {
+    marginHorizontal: 16,
+    marginBottom: 8,
+    paddingVertical: 8,
+    gap: 8,
+  },
+  filterTitle: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: Colors.textMuted,
+    letterSpacing: 0.3,
+    textTransform: 'uppercase',
+  },
+  wrapRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
   categoryScroll: {
-    maxHeight: 40,
-    marginBottom: 4,
+    marginBottom: 2,
   },
   categoryContent: {
-    paddingHorizontal: 16,
+    paddingVertical: 2,
     gap: 8,
   },
   chip: {
@@ -230,11 +304,10 @@ const styles = StyleSheet.create({
     color: '#fff',
   },
   sortScroll: {
-    maxHeight: 36,
-    marginVertical: 8,
+    marginVertical: 2,
   },
   sortContent: {
-    paddingHorizontal: 16,
+    paddingVertical: 2,
     gap: 8,
   },
   sortChip: {
@@ -258,8 +331,20 @@ const styles = StyleSheet.create({
     color: '#fff',
   },
   list: {
+    width: '100%',
+    alignSelf: 'center',
     padding: 16,
     paddingTop: 4,
+  },
+  listWrapper: {
+    flex: 1,
+  },
+  gridRow: {
+    gap: 12,
+  },
+  gridItem: {
+    flex: 1,
+    minWidth: 0,
   },
   errorBox: {
     flexDirection: 'row',

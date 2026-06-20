@@ -1,11 +1,16 @@
-//frontend\app\_layout.tsx
+// frontend/app/_layout.tsx
+import * as Sentry from '@sentry/react-native';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import React from 'react';
 import { AuthProvider } from '../context/AuthContext';
 import { CartProvider } from '../context/CartContext';
+import { initSentry } from '../utils/sentry';
 
-export default function RootLayout() {
+// Inicializar Sentry una sola vez al cargar el módulo
+initSentry();
+
+function RootLayout() {
   return (
     <AuthProvider>
       <CartProvider>
@@ -35,3 +40,6 @@ export default function RootLayout() {
     </AuthProvider>
   );
 }
+
+// Sentry.wrap() captura errores no controlados (crashes) a nivel de componente
+export default Sentry.wrap(RootLayout);

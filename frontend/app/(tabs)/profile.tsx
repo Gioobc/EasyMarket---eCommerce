@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import * as Sentry from '@sentry/react-native';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
@@ -17,6 +18,7 @@ import { Button } from '../../components/Button';
 import { Input } from '../../components/Input';
 import { Colors } from '../../constants/Colors';
 import { useAuth } from '../../context/AuthContext';
+import { sendTestLogs, sendTestMetrics, simulateError } from '../../utils/sentry';
 
 export default function ProfileScreen() {
   const { user, logout, updateProfile } = useAuth();
@@ -87,6 +89,32 @@ export default function ProfileScreen() {
       { text: 'Cerrar sesión', style: 'destructive', onPress: logout },
     ]);
   };
+
+  // ── Sentry test handlers ────────────────────────────────────────────────────
+  const handleSimulateError = () => {
+    simulateError();
+    Alert.alert('Sentry', 'Error enviado a Sentry ✓\nRevisa el dashboard en Issues.');
+  };
+
+  const handleSendLogs = () => {
+    sendTestLogs();
+    Alert.alert('Sentry', 'Logs enviados a Sentry ✓\nRevisa el dashboard en Logs.');
+  };
+
+  const handleSendMetrics = () => {
+    sendTestMetrics();
+    Alert.alert('Sentry', 'Métricas enviadas a Sentry ✓\nRevisa el dashboard en Metrics.');
+  };
+
+  const handleStartTrace = () => {
+    const span = Sentry.startInactiveSpan({ name: 'User Login — EasyMarket' });
+    // Simula trabajo asíncrono de 800ms
+    setTimeout(() => {
+      span.end();
+      Alert.alert('Sentry', 'Traza "User Login" enviada ✓\nRevisa el dashboard en Performance.');
+    }, 800);
+  };
+  // ───────────────────────────────────────────────────────────────────────────
 
   const initials = user.name
     .split(' ')
@@ -200,6 +228,34 @@ export default function ProfileScreen() {
           </View>
         </View>
 
+        {/* Sentry — Panel de pruebas (LAB-04) */}
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>🔍 Sentry — Panel de pruebas</Text>
+          <Text style={[styles.alertSubtitle, { marginBottom: 14 }]}>
+            Botones para verificar la integración en el dashboard de Sentry.
+          </Text>
+
+          <TouchableOpacity style={[sentryStyles.btn, sentryStyles.btnDanger]} onPress={handleSimulateError}>
+            <Ionicons name="bug-outline" size={16} color="#fff" />
+            <Text style={sentryStyles.btnText}>Simular Error</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={[sentryStyles.btn, sentryStyles.btnInfo]} onPress={handleSendLogs}>
+            <Ionicons name="document-text-outline" size={16} color="#fff" />
+            <Text style={sentryStyles.btnText}>Enviar Logs</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={[sentryStyles.btn, sentryStyles.btnSuccess]} onPress={handleSendMetrics}>
+            <Ionicons name="bar-chart-outline" size={16} color="#fff" />
+            <Text style={sentryStyles.btnText}>Enviar Métricas</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={[sentryStyles.btn, sentryStyles.btnWarning]} onPress={handleStartTrace}>
+            <Ionicons name="timer-outline" size={16} color="#fff" />
+            <Text style={sentryStyles.btnText}>Iniciar Traza (User Login)</Text>
+          </TouchableOpacity>
+        </View>
+
         {/* Cerrar sesión */}
         <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout}>
           <Ionicons name="log-out-outline" size={20} color={Colors.danger} />
@@ -239,6 +295,23 @@ const rowStyles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   value: { fontSize: 15, color: Colors.textPrimary, fontWeight: '500', marginTop: 2 },
+});
+
+const sentryStyles = StyleSheet.create({
+  btn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 11,
+    borderRadius: 10,
+    marginBottom: 10,
+  },
+  btnText: { color: '#fff', fontWeight: '600', fontSize: 14 },
+  btnDanger: { backgroundColor: '#E53E3E' },
+  btnInfo: { backgroundColor: '#3182CE' },
+  btnSuccess: { backgroundColor: '#38A169' },
+  btnWarning: { backgroundColor: '#D69E2E' },
 });
 
 const styles = StyleSheet.create({

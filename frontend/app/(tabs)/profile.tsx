@@ -33,6 +33,31 @@ export default function ProfileScreen() {
   const [saving, setSaving] = useState(false);
   const [savingAlerts, setSavingAlerts] = useState(false);
 
+  // ── Sentry test handlers ────────────────────────────────────────────────────
+  const handleSimulateError = () => {
+    simulateError();
+    Alert.alert('Sentry', 'Error enviado a Sentry ✓\nRevisa el dashboard en Issues.');
+  };
+
+  const handleSendLogs = () => {
+    sendTestLogs();
+    Alert.alert('Sentry', 'Logs enviados a Sentry ✓\nRevisa el dashboard en Logs.');
+  };
+
+  const handleSendMetrics = () => {
+    sendTestMetrics();
+    Alert.alert('Sentry', 'Métricas enviadas a Sentry ✓\nRevisa el dashboard en Metrics.');
+  };
+
+  const handleStartTrace = () => {
+    const span = Sentry.startInactiveSpan({ name: 'User Login — EasyMarket' });
+    setTimeout(() => {
+      span.end();
+      Alert.alert('Sentry', 'Traza "User Login" enviada ✓\nRevisa el dashboard en Performance.');
+    }, 800);
+  };
+  // ───────────────────────────────────────────────────────────────────────────
+
   if (!user) {
     return (
       <SafeAreaView style={styles.centered} edges={['bottom']}>
@@ -43,6 +68,30 @@ export default function ProfileScreen() {
         <TouchableOpacity onPress={() => router.push('/auth/register')} style={styles.registerLink}>
           <Text style={styles.registerLinkText}>¿No tienes una cuenta? Regístrate</Text>
         </TouchableOpacity>
+
+        {/* Sentry — Panel de pruebas visible sin login (LAB-04) */}
+        <View style={[styles.card, { marginTop: 32, width: '100%' }]}>
+          <Text style={styles.cardTitle}>🔍 Sentry — Panel de pruebas</Text>
+          <Text style={[styles.guestSubtitle, { marginBottom: 14 }]}>
+            Prueba la integración sin necesidad de login.
+          </Text>
+          <TouchableOpacity style={[sentryStyles.btn, sentryStyles.btnDanger]} onPress={handleSimulateError}>
+            <Ionicons name="bug-outline" size={16} color="#fff" />
+            <Text style={sentryStyles.btnText}>Simular Error</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={[sentryStyles.btn, sentryStyles.btnInfo]} onPress={handleSendLogs}>
+            <Ionicons name="document-text-outline" size={16} color="#fff" />
+            <Text style={sentryStyles.btnText}>Enviar Logs</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={[sentryStyles.btn, sentryStyles.btnSuccess]} onPress={handleSendMetrics}>
+            <Ionicons name="bar-chart-outline" size={16} color="#fff" />
+            <Text style={sentryStyles.btnText}>Enviar Métricas</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={[sentryStyles.btn, sentryStyles.btnWarning]} onPress={handleStartTrace}>
+            <Ionicons name="timer-outline" size={16} color="#fff" />
+            <Text style={sentryStyles.btnText}>Iniciar Traza</Text>
+          </TouchableOpacity>
+        </View>
       </SafeAreaView>
     );
   }
@@ -89,32 +138,6 @@ export default function ProfileScreen() {
       { text: 'Cerrar sesión', style: 'destructive', onPress: logout },
     ]);
   };
-
-  // ── Sentry test handlers ────────────────────────────────────────────────────
-  const handleSimulateError = () => {
-    simulateError();
-    Alert.alert('Sentry', 'Error enviado a Sentry ✓\nRevisa el dashboard en Issues.');
-  };
-
-  const handleSendLogs = () => {
-    sendTestLogs();
-    Alert.alert('Sentry', 'Logs enviados a Sentry ✓\nRevisa el dashboard en Logs.');
-  };
-
-  const handleSendMetrics = () => {
-    sendTestMetrics();
-    Alert.alert('Sentry', 'Métricas enviadas a Sentry ✓\nRevisa el dashboard en Metrics.');
-  };
-
-  const handleStartTrace = () => {
-    const span = Sentry.startInactiveSpan({ name: 'User Login — EasyMarket' });
-    // Simula trabajo asíncrono de 800ms
-    setTimeout(() => {
-      span.end();
-      Alert.alert('Sentry', 'Traza "User Login" enviada ✓\nRevisa el dashboard en Performance.');
-    }, 800);
-  };
-  // ───────────────────────────────────────────────────────────────────────────
 
   const initials = user.name
     .split(' ')

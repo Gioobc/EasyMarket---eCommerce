@@ -15,6 +15,9 @@ export function initSentry(): void {
     // Habilita logging de Sentry en consola durante desarrollo
     debug: __DEV__,
 
+    // Habilita Sentry.logger (logs personalizados)
+    _experiments: { enableLogs: true },
+
     // Integrations por defecto (crashes nativos, ANR, etc.)
     enableNativeCrashHandling: true,
     enableAutoPerformanceTracing: true,

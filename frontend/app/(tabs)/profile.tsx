@@ -1,5 +1,4 @@
 import { Ionicons } from '@expo/vector-icons';
-import * as Sentry from '@sentry/react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
@@ -20,7 +19,6 @@ import { Input } from '../../components/Input';
 import { Colors, Gradients } from '../../constants/Colors';
 import { useAuth } from '../../context/AuthContext';
 import { PaymentMethodSaved, authApi } from '../../services/api';
-import { sendTestLogs, sendTestMetrics, simulateError } from '../../utils/sentry';
 
 const BRAND_COLORS: Record<string, string> = {
   visa: '#1A1F71',
@@ -71,14 +69,6 @@ export default function ProfileScreen() {
     ]);
   };
 
-  const handleSimulateError = () => { simulateError(); Alert.alert('Sentry', 'Error enviado ✓'); };
-  const handleSendLogs = () => { sendTestLogs(); Alert.alert('Sentry', 'Logs enviados ✓'); };
-  const handleSendMetrics = () => { sendTestMetrics(); Alert.alert('Sentry', 'Métricas enviadas ✓'); };
-  const handleStartTrace = () => {
-    const span = Sentry.startInactiveSpan({ name: 'User Login — EasyMarket' });
-    setTimeout(() => { span.end(); Alert.alert('Sentry', 'Traza enviada ✓'); }, 800);
-  };
-
   if (!user) {
     return (
       <SafeAreaView style={styles.centered} edges={['bottom']}>
@@ -92,10 +82,6 @@ export default function ProfileScreen() {
           <Text style={styles.registerLinkText}>¿No tienes cuenta? Regístrate gratis</Text>
         </TouchableOpacity>
 
-        <View style={[styles.card, { marginTop: 32 }]}>
-          <Text style={styles.cardTitle}>🔍 Sentry — Panel de pruebas</Text>
-          <SentryBtnRow onError={handleSimulateError} onLogs={handleSendLogs} onMetrics={handleSendMetrics} onTrace={handleStartTrace} />
-        </View>
       </SafeAreaView>
     );
   }
@@ -236,12 +222,6 @@ export default function ProfileScreen() {
           </View>
         </View>
 
-        {/* Sentry */}
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>🔍 Sentry — Panel de pruebas</Text>
-          <SentryBtnRow onError={handleSimulateError} onLogs={handleSendLogs} onMetrics={handleSendMetrics} onTrace={handleStartTrace} />
-        </View>
-
         {/* Logout */}
         <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout}>
           <Ionicons name="log-out-outline" size={20} color={Colors.danger} />
@@ -251,28 +231,6 @@ export default function ProfileScreen() {
     </KeyboardAvoidingView>
   );
 }
-
-const SentryBtnRow = ({ onError, onLogs, onMetrics, onTrace }: {
-  onError: () => void; onLogs: () => void; onMetrics: () => void; onTrace: () => void;
-}) => (
-  <View style={{ gap: 10, marginTop: 12 }}>
-    {[
-      { label: 'Simular Error', icon: 'bug-outline', color: '#E53E3E', onPress: onError },
-      { label: 'Enviar Logs', icon: 'document-text-outline', color: '#3182CE', onPress: onLogs },
-      { label: 'Enviar Métricas', icon: 'bar-chart-outline', color: '#38A169', onPress: onMetrics },
-      { label: 'Iniciar Traza', icon: 'timer-outline', color: '#D69E2E', onPress: onTrace },
-    ].map((btn) => (
-      <TouchableOpacity
-        key={btn.label}
-        style={[sentryStyles.btn, { backgroundColor: btn.color }]}
-        onPress={btn.onPress}
-      >
-        <Ionicons name={btn.icon as React.ComponentProps<typeof Ionicons>['name']} size={16} color="#fff" />
-        <Text style={sentryStyles.btnText}>{btn.label}</Text>
-      </TouchableOpacity>
-    ))}
-  </View>
-);
 
 const ProfileRow = ({
   icon, label, value,
@@ -298,14 +256,6 @@ const rowStyles = StyleSheet.create({
   },
   label: { fontSize: 11, color: Colors.textMuted, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 },
   value: { fontSize: 15, color: Colors.textPrimary, fontWeight: '500', marginTop: 2 },
-});
-
-const sentryStyles = StyleSheet.create({
-  btn: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    gap: 8, paddingVertical: 12, borderRadius: 12,
-  },
-  btnText: { color: '#fff', fontWeight: '700', fontSize: 14 },
 });
 
 const styles = StyleSheet.create({

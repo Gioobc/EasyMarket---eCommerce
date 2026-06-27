@@ -1,16 +1,25 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Platform } from 'react-native';
+import Constants from 'expo-constants';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
+import { Platform } from 'react-native';
 
-// Selecciona la URL base según la plataforma.
-// Para dispositivo físico Android: cambiar a la IP de tu máquina (ej. 192.168.1.X).
-const API_BASE = Platform.select({
-  web: 'http://localhost:3001/api',
-  android: 'http://10.0.2.2:3001/api',
-  ios: 'http://localhost:3001/api',
-  default: 'http://localhost:3001/api',
-});
+const getApiBase = (): string => {
+  if (Platform.OS === 'web') return 'http://localhost:3001/api';
+  // En Expo Go, hostUri tiene la forma "192.168.x.x:8081"
+  const hostUri: string | undefined =
+    (Constants.expoConfig as { hostUri?: string } | null)?.hostUri ??
+    (Constants.manifest as { debuggerHost?: string } | null)?.debuggerHost;
+  if (hostUri) {
+    const ip = hostUri.split(':')[0];
+    return `http://${ip}:3001/api`;
+  }
+  // Fallback: emulador Android
+  if (Platform.OS === 'android') return 'http://10.0.2.2:3001/api';
+  return 'http://localhost:3001/api';
+};
+
+const API_BASE = getApiBase();
 
 const getToken = (): Promise<string | null> => AsyncStorage.getItem('token');
 

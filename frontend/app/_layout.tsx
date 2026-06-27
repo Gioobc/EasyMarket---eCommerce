@@ -2,12 +2,13 @@ import * as Sentry from '@sentry/react-native';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import React from 'react';
+import { Platform } from 'react-native';
 import { AuthProvider } from '../context/AuthContext';
 import { CartProvider } from '../context/CartContext';
 import { Colors } from '../constants/Colors';
 import { initSentry } from '../utils/sentry';
 
-initSentry();
+if (Platform.OS !== 'web') initSentry();
 
 function RootLayout() {
   return (
@@ -46,4 +47,4 @@ function RootLayout() {
   );
 }
 
-export default Sentry.wrap(RootLayout);
+export default Platform.OS !== 'web' ? Sentry.wrap(RootLayout) : RootLayout;

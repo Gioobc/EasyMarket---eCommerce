@@ -1,11 +1,12 @@
 // frontend/utils/sentry.ts
 import * as Sentry from '@sentry/react-native';
+import { Platform } from 'react-native';
 
-// ⚠️  Reemplaza este DSN con el tuyo desde el dashboard de Sentry:
-//     Settings → Projects → <tu-proyecto> → Client Keys (DSN)
 const SENTRY_DSN = 'https://79612e0dcf3bd7fcc05d40e3b7a3e38c@o4511360948830208.ingest.us.sentry.io/4511598895431680';
 
 export function initSentry(): void {
+  if (Platform.OS === 'web') return;
+
   Sentry.init({
     dsn: SENTRY_DSN,
 

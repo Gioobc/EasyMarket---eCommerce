@@ -1,21 +1,31 @@
 export const Colors = {
-  primary: '#4F46E5',
-  primaryLight: '#818CF8',
-  primaryDark: '#3730A3',
+  primary: '#6366F1',
+  primaryLight: '#A5B4FC',
+  primaryDark: '#4338CA',
   secondary: '#10B981',
+  secondaryLight: '#A7F3D0',
   danger: '#EF4444',
+  dangerLight: '#FEE2E2',
   warning: '#F59E0B',
-  background: '#F9FAFB',
+  background: '#F5F3FF',
   surface: '#FFFFFF',
+  surfaceElevated: '#FAFAFF',
   border: '#E5E7EB',
-  textPrimary: '#111827',
+  borderLight: '#F3F4F6',
+  textPrimary: '#0F0F23',
   textSecondary: '#6B7280',
   textMuted: '#9CA3AF',
-  star: '#F59E0B',
-
-  // Nuevos tokens
-  discount: '#DC2626', // badge de oferta
+  star: '#FBBF24',
+  discount: '#DC2626',
   statusPreparing: '#F59E0B',
   statusOnTheWay: '#3B82F6',
   statusDelivered: '#10B981',
+};
+
+export const Gradients = {
+  primary: ['#6366F1', '#8B5CF6'] as const,
+  primaryDark: ['#4338CA', '#6366F1'] as const,
+  success: ['#10B981', '#059669'] as const,
+  warm: ['#F59E0B', '#EF4444'] as const,
+  hero: ['#4338CA', '#6366F1', '#8B5CF6'] as const,
 };

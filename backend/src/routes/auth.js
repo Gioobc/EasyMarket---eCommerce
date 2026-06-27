@@ -105,4 +105,63 @@ router.put(
   })
 );
 
+// GET /api/auth/payment-methods
+router.get(
+  '/payment-methods',
+  authenticate,
+  asyncHandler(async (req, res) => {
+    const user = await User.findById(req.user.id);
+    if (!user) throw ApiError.notFound('Usuario no encontrado');
+    res.json((user.paymentMethods || []).map((m) => m.toJSON()));
+  })
+);
+
+// POST /api/auth/payment-methods  — guarda una tarjeta (solo datos no sensibles)
+router.post(
+  '/payment-methods',
+  authenticate,
+  asyncHandler(async (req, res) => {
+    const { brand, last4, holderName, expiryMonth, expiryYear } = req.body;
+    requireFields(req.body, ['last4', 'holderName', 'expiryMonth', 'expiryYear']);
+
+    if (String(last4).length !== 4 || !/^\d{4}$/.test(String(last4))) {
+      throw ApiError.badRequest('last4 debe ser exactamente 4 dígitos');
+    }
+    if (expiryMonth < 1 || expiryMonth > 12) {
+      throw ApiError.badRequest('Mes de vencimiento inválido');
+    }
+
+    const user = await User.findById(req.user.id);
+    if (!user) throw ApiError.notFound('Usuario no encontrado');
+    if (user.paymentMethods.length >= 5) {
+      throw ApiError.badRequest('Máximo 5 métodos de pago guardados');
+    }
+
+    user.paymentMethods.push({ brand: brand || 'other', last4, holderName, expiryMonth, expiryYear });
+    await user.save();
+    const added = user.paymentMethods[user.paymentMethods.length - 1];
+    res.status(201).json(added.toJSON());
+  })
+);
+
+// DELETE /api/auth/payment-methods/:methodId
+router.delete(
+  '/payment-methods/:methodId',
+  authenticate,
+  asyncHandler(async (req, res) => {
+    const user = await User.findById(req.user.id);
+    if (!user) throw ApiError.notFound('Usuario no encontrado');
+
+    const before = user.paymentMethods.length;
+    user.paymentMethods = user.paymentMethods.filter(
+      (m) => m._id.toString() !== req.params.methodId
+    );
+    if (user.paymentMethods.length === before) {
+      throw ApiError.notFound('Método de pago no encontrado');
+    }
+    await user.save();
+    res.json({ message: 'Método de pago eliminado' });
+  })
+);
+
 module.exports = router;

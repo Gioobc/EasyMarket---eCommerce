@@ -1,4 +1,3 @@
-//frontend\app\(tabs)\_layout.tsx
 import { Ionicons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
 import React from 'react';
@@ -26,17 +25,24 @@ export default function TabsLayout() {
       screenOptions={{
         tabBarActiveTintColor: Colors.primary,
         tabBarInactiveTintColor: Colors.textMuted,
-        tabBarStyle: { borderTopColor: Colors.border, backgroundColor: Colors.surface },
+        tabBarStyle: {
+          borderTopColor: Colors.border,
+          backgroundColor: Colors.surface,
+          height: 62,
+          paddingBottom: 8,
+          paddingTop: 6,
+        },
+        tabBarLabelStyle: { fontSize: 11, fontWeight: '600' },
         headerStyle: { backgroundColor: Colors.primary },
         headerTintColor: '#fff',
-        headerTitleStyle: { fontWeight: '700' },
+        headerTitleStyle: { fontWeight: '800', fontSize: 18 },
       }}
     >
       <Tabs.Screen
         name="index"
         options={{
           title: 'EasyMarket',
-          tabBarLabel: 'Home',
+          tabBarLabel: 'Inicio',
           tabBarIcon: ({ color, focused }) => (
             <Ionicons name={focused ? 'home' : 'home-outline'} size={24} color={color} />
           ),
@@ -45,16 +51,16 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="cart"
         options={{
-          title: 'My Cart',
-          tabBarLabel: 'Cart',
+          title: 'Mi Carrito',
+          tabBarLabel: 'Carrito',
           tabBarIcon: (props) => <CartTabIcon {...props} />,
         }}
       />
       <Tabs.Screen
         name="history"
         options={{
-          title: 'Purchase History',
-          tabBarLabel: 'Orders',
+          title: 'Mis Pedidos',
+          tabBarLabel: 'Pedidos',
           tabBarIcon: ({ color, focused }) => (
             <Ionicons name={focused ? 'receipt' : 'receipt-outline'} size={24} color={color} />
           ),
@@ -63,8 +69,8 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="profile"
         options={{
-          title: 'My Profile',
-          tabBarLabel: 'Profile',
+          title: 'Mi Perfil',
+          tabBarLabel: 'Perfil',
           tabBarIcon: ({ color, focused }) => (
             <Ionicons name={focused ? 'person' : 'person-outline'} size={24} color={color} />
           ),
@@ -75,24 +81,18 @@ export default function TabsLayout() {
 }
 
 const styles = StyleSheet.create({
-  iconContainer: {
-    position: 'relative',
-  },
+  iconContainer: { position: 'relative' },
   badge: {
     position: 'absolute',
-    top: -4,
-    right: -8,
+    top: -5,
+    right: -9,
     backgroundColor: Colors.danger,
-    borderRadius: 8,
-    minWidth: 16,
-    height: 16,
+    borderRadius: 9,
+    minWidth: 17,
+    height: 17,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 3,
   },
-  badgeText: {
-    color: '#fff',
-    fontSize: 10,
-    fontWeight: '700',
-  },
+  badgeText: { color: '#fff', fontSize: 10, fontWeight: '800' },
 });

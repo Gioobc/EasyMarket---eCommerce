@@ -1,20 +1,19 @@
-// frontend/app/_layout.tsx
 import * as Sentry from '@sentry/react-native';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import React from 'react';
 import { AuthProvider } from '../context/AuthContext';
 import { CartProvider } from '../context/CartContext';
+import { Colors } from '../constants/Colors';
 import { initSentry } from '../utils/sentry';
 
-// Inicializar Sentry una sola vez al cargar el módulo
 initSentry();
 
 function RootLayout() {
   return (
     <AuthProvider>
       <CartProvider>
-        <StatusBar style="auto" />
+        <StatusBar style="light" />
         <Stack screenOptions={{ headerShown: false }}>
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
           <Stack.Screen name="auth/login" options={{ headerShown: false }} />
@@ -23,16 +22,22 @@ function RootLayout() {
             name="product/[id]"
             options={{
               headerShown: true,
-              title: 'Detalles del Producto',
-              headerBackTitle: 'Back',
+              title: 'Detalle del Producto',
+              headerBackTitle: 'Volver',
+              headerStyle: { backgroundColor: Colors.primary },
+              headerTintColor: '#fff',
+              headerTitleStyle: { fontWeight: '700' },
             }}
           />
           <Stack.Screen
             name="order/[id]"
             options={{
               headerShown: true,
-              title: 'Order Detail',
-              headerBackTitle: 'Back',
+              title: 'Detalle del Pedido',
+              headerBackTitle: 'Volver',
+              headerStyle: { backgroundColor: Colors.primary },
+              headerTintColor: '#fff',
+              headerTitleStyle: { fontWeight: '700' },
             }}
           />
         </Stack>
@@ -41,5 +46,4 @@ function RootLayout() {
   );
 }
 
-// Sentry.wrap() captura errores no controlados (crashes) a nivel de componente
 export default Sentry.wrap(RootLayout);

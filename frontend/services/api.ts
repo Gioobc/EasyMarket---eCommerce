@@ -3,9 +3,14 @@ import { Platform } from 'react-native';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 
-// Cambia esto a la IP de tu backend al usar un dispositivo físico.
-// Android Emulator: http://10.0.2.2:3001/api  |  Web/iOS Simulator: localhost
-const API_BASE = 'http://192.168.68.119:3001/api';
+// Selecciona la URL base según la plataforma.
+// Para dispositivo físico Android: cambiar a la IP de tu máquina (ej. 192.168.1.X).
+const API_BASE = Platform.select({
+  web: 'http://localhost:3001/api',
+  android: 'http://10.0.2.2:3001/api',
+  ios: 'http://localhost:3001/api',
+  default: 'http://localhost:3001/api',
+});
 
 const getToken = (): Promise<string | null> => AsyncStorage.getItem('token');
 
@@ -29,7 +34,6 @@ const request = async <T>(
     body: body ? JSON.stringify(body) : undefined,
   });
 
-  // 204/sin contenido: no intentamos parsear.
   const text = await response.text();
   const data = text ? JSON.parse(text) : {};
 
@@ -53,6 +57,23 @@ export const authApi = {
 
   updateProfile: (payload: UpdateProfilePayload) =>
     request<User>('PUT', '/auth/profile', payload, true),
+
+  getPaymentMethods: () =>
+    request<PaymentMethodSaved[]>('GET', '/auth/payment-methods', undefined, true),
+
+  addPaymentMethod: (payload: AddPaymentMethodPayload) =>
+    request<PaymentMethodSaved>('POST', '/auth/payment-methods', payload, true),
+
+  deletePaymentMethod: (id: string) =>
+    request<{ message: string }>('DELETE', `/auth/payment-methods/${id}`, undefined, true),
+};
+
+// ---------------------------------------------------------------------------
+// Config
+// ---------------------------------------------------------------------------
+export const configApi = {
+  getPickupCenters: () => request<string[]>('GET', '/config/pickup-centers'),
+  getShipping: () => request<{ deliveryCost: number; freeShippingThreshold: number }>('GET', '/config/shipping'),
 };
 
 // ---------------------------------------------------------------------------
@@ -71,15 +92,9 @@ export const productsApi = {
   },
 
   getCategories: () => request<string[]>('GET', '/products/categories'),
-
-  // Carrusel promocional: productos con descuento.
   getOffers: () => request<Product[]>('GET', '/products/offers'),
-
-  // Recomendaciones personalizadas (requiere sesión).
   getRecommendations: (limit = 8) =>
     request<Product[]>('GET', `/products/recommendations?limit=${limit}`, undefined, true),
-
-  // auth=true para que el backend registre la vista si hay sesión (optionalAuth).
   getById: (id: string) => request<Product>('GET', `/products/${id}`, undefined, true),
 };
 
@@ -88,16 +103,12 @@ export const productsApi = {
 // ---------------------------------------------------------------------------
 export const cartApi = {
   getCart: () => request<Cart>('GET', '/cart', undefined, true),
-
   addItem: (productId: string, quantity = 1) =>
     request<CartMutationResponse>('POST', '/cart/items', { productId, quantity }, true),
-
   updateItem: (productId: string, quantity: number) =>
     request<CartMutationResponse>('PUT', `/cart/items/${productId}`, { quantity }, true),
-
   removeItem: (productId: string) =>
     request<CartMutationResponse>('DELETE', `/cart/items/${productId}`, undefined, true),
-
   clearCart: () => request<CartMutationResponse>('DELETE', '/cart', undefined, true),
 };
 
@@ -106,7 +117,6 @@ export const cartApi = {
 // ---------------------------------------------------------------------------
 export const couponsApi = {
   list: () => request<CouponSummary[]>('GET', '/coupons'),
-
   validate: (code: string, subtotal: number) =>
     request<CouponValidation>('POST', '/coupons/validate', { code, subtotal }, true),
 };
@@ -117,18 +127,10 @@ export const couponsApi = {
 export const ordersApi = {
   checkout: (payload: CheckoutPayload) =>
     request<Order>('POST', '/orders/checkout', payload, true),
-
   getOrders: () => request<Order[]>('GET', '/orders', undefined, true),
-
   getOrder: (id: string) => request<Order>('GET', `/orders/${id}`, undefined, true),
-
   updateStatus: (id: string, status: OrderStatus) =>
     request<Order>('PATCH', `/orders/${id}/status`, { status }, true),
-
-  /**
-   * Descarga la boleta en PDF. En web fuerza la descarga; en nativo guarda el
-   * archivo y abre el diálogo de compartir.
-   */
   downloadReceipt: async (orderId: string): Promise<string | void> => {
     const token = await getToken();
     const url = `${API_BASE}/orders/${orderId}/receipt`;
@@ -157,11 +159,10 @@ export const ordersApi = {
 };
 
 // ---------------------------------------------------------------------------
-// Reseñas / Valoraciones
+// Reseñas
 // ---------------------------------------------------------------------------
 export const reviewsApi = {
   create: (payload: ReviewPayload) => request<Review>('POST', '/reviews', payload, true),
-
   forProduct: (productId: string) =>
     request<ProductReview[]>('GET', `/reviews/product/${productId}`),
 };
@@ -178,6 +179,7 @@ export interface User {
   avatar?: string;
   emailAlerts?: boolean;
   viewedProductIds?: string[];
+  paymentMethods?: PaymentMethodSaved[];
   createdAt: string;
 }
 
@@ -203,6 +205,25 @@ export type UpdateProfilePayload = Partial<
   newPassword?: string;
 };
 
+export type CardBrand = 'visa' | 'mastercard' | 'amex' | 'other';
+
+export interface PaymentMethodSaved {
+  id: string;
+  brand: CardBrand;
+  last4: string;
+  holderName: string;
+  expiryMonth: number;
+  expiryYear: number;
+}
+
+export interface AddPaymentMethodPayload {
+  brand: CardBrand;
+  last4: string;
+  holderName: string;
+  expiryMonth: number;
+  expiryYear: number;
+}
+
 export type SortOption = '' | 'price_asc' | 'price_desc' | 'rating';
 
 export interface ProductQuery {
@@ -218,8 +239,8 @@ export interface Product {
   name: string;
   description: string;
   price: number;
-  discount: number; // % de descuento (0 = sin oferta)
-  finalPrice: number; // precio ya con descuento aplicado
+  discount: number;
+  finalPrice: number;
   category: string;
   image: string;
   stock: number;

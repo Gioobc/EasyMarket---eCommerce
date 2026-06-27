@@ -1,7 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
 import * as Sentry from '@sentry/react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Alert,
   KeyboardAvoidingView,
@@ -16,9 +17,17 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button } from '../../components/Button';
 import { Input } from '../../components/Input';
-import { Colors } from '../../constants/Colors';
+import { Colors, Gradients } from '../../constants/Colors';
 import { useAuth } from '../../context/AuthContext';
+import { PaymentMethodSaved, authApi } from '../../services/api';
 import { sendTestLogs, sendTestMetrics, simulateError } from '../../utils/sentry';
+
+const BRAND_COLORS: Record<string, string> = {
+  visa: '#1A1F71',
+  mastercard: '#EB001B',
+  amex: '#007BC1',
+  other: Colors.primary,
+};
 
 export default function ProfileScreen() {
   const { user, logout, updateProfile } = useAuth();
@@ -32,88 +41,72 @@ export default function ProfileScreen() {
   const [newPassword, setNewPassword] = useState('');
   const [saving, setSaving] = useState(false);
   const [savingAlerts, setSavingAlerts] = useState(false);
+  const [paymentMethods, setPaymentMethods] = useState<PaymentMethodSaved[]>([]);
+  const [loadingCards, setLoadingCards] = useState(false);
 
-  // ── Sentry test handlers ────────────────────────────────────────────────────
-  const handleSimulateError = () => {
-    simulateError();
-    Alert.alert('Sentry', 'Error enviado a Sentry ✓\nRevisa el dashboard en Issues.');
+  useEffect(() => {
+    if (user) {
+      setLoadingCards(true);
+      authApi.getPaymentMethods()
+        .then(setPaymentMethods)
+        .catch(() => {})
+        .finally(() => setLoadingCards(false));
+    }
+  }, [user]);
+
+  const handleDeleteCard = (id: string) => {
+    Alert.alert('Eliminar tarjeta', '¿Estás seguro de que deseas eliminar este método de pago?', [
+      { text: 'Cancelar', style: 'cancel' },
+      {
+        text: 'Eliminar', style: 'destructive',
+        onPress: async () => {
+          try {
+            await authApi.deletePaymentMethod(id);
+            setPaymentMethods((prev) => prev.filter((m) => m.id !== id));
+          } catch (e: unknown) {
+            Alert.alert('Error', e instanceof Error ? e.message : 'No se pudo eliminar');
+          }
+        },
+      },
+    ]);
   };
 
-  const handleSendLogs = () => {
-    sendTestLogs();
-    Alert.alert('Sentry', 'Logs enviados a Sentry ✓\nRevisa el dashboard en Logs.');
-  };
-
-  const handleSendMetrics = () => {
-    sendTestMetrics();
-    Alert.alert('Sentry', 'Métricas enviadas a Sentry ✓\nRevisa el dashboard en Metrics.');
-  };
-
+  const handleSimulateError = () => { simulateError(); Alert.alert('Sentry', 'Error enviado ✓'); };
+  const handleSendLogs = () => { sendTestLogs(); Alert.alert('Sentry', 'Logs enviados ✓'); };
+  const handleSendMetrics = () => { sendTestMetrics(); Alert.alert('Sentry', 'Métricas enviadas ✓'); };
   const handleStartTrace = () => {
     const span = Sentry.startInactiveSpan({ name: 'User Login — EasyMarket' });
-    setTimeout(() => {
-      span.end();
-      Alert.alert('Sentry', 'Traza "User Login" enviada ✓\nRevisa el dashboard en Performance.');
-    }, 800);
+    setTimeout(() => { span.end(); Alert.alert('Sentry', 'Traza enviada ✓'); }, 800);
   };
-  // ───────────────────────────────────────────────────────────────────────────
 
   if (!user) {
     return (
       <SafeAreaView style={styles.centered} edges={['bottom']}>
-        <Ionicons name="person-circle-outline" size={80} color={Colors.border} />
+        <LinearGradient colors={Gradients.primary} style={styles.guestIcon}>
+          <Ionicons name="person-outline" size={40} color="#fff" />
+        </LinearGradient>
         <Text style={styles.guestTitle}>Bienvenido a EasyMarket</Text>
         <Text style={styles.guestSubtitle}>Inicia sesión para gestionar tu cuenta</Text>
         <Button title="Iniciar sesión" onPress={() => router.push('/auth/login')} style={styles.btn} />
         <TouchableOpacity onPress={() => router.push('/auth/register')} style={styles.registerLink}>
-          <Text style={styles.registerLinkText}>¿No tienes una cuenta? Regístrate</Text>
+          <Text style={styles.registerLinkText}>¿No tienes cuenta? Regístrate gratis</Text>
         </TouchableOpacity>
 
-        {/* Sentry — Panel de pruebas visible sin login (LAB-04) */}
-        <View style={[styles.card, { marginTop: 32, width: '100%' }]}>
+        <View style={[styles.card, { marginTop: 32 }]}>
           <Text style={styles.cardTitle}>🔍 Sentry — Panel de pruebas</Text>
-          <Text style={[styles.guestSubtitle, { marginBottom: 14 }]}>
-            Prueba la integración sin necesidad de login.
-          </Text>
-          <TouchableOpacity style={[sentryStyles.btn, sentryStyles.btnDanger]} onPress={handleSimulateError}>
-            <Ionicons name="bug-outline" size={16} color="#fff" />
-            <Text style={sentryStyles.btnText}>Simular Error</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={[sentryStyles.btn, sentryStyles.btnInfo]} onPress={handleSendLogs}>
-            <Ionicons name="document-text-outline" size={16} color="#fff" />
-            <Text style={sentryStyles.btnText}>Enviar Logs</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={[sentryStyles.btn, sentryStyles.btnSuccess]} onPress={handleSendMetrics}>
-            <Ionicons name="bar-chart-outline" size={16} color="#fff" />
-            <Text style={sentryStyles.btnText}>Enviar Métricas</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={[sentryStyles.btn, sentryStyles.btnWarning]} onPress={handleStartTrace}>
-            <Ionicons name="timer-outline" size={16} color="#fff" />
-            <Text style={sentryStyles.btnText}>Iniciar Traza</Text>
-          </TouchableOpacity>
+          <SentryBtnRow onError={handleSimulateError} onLogs={handleSendLogs} onMetrics={handleSendMetrics} onTrace={handleStartTrace} />
         </View>
       </SafeAreaView>
     );
   }
 
   const handleSave = async () => {
-    if (!name.trim()) {
-      Alert.alert('Validación', 'El nombre no puede estar vacío');
-      return;
-    }
+    if (!name.trim()) { Alert.alert('Validación', 'El nombre no puede estar vacío'); return; }
     try {
       setSaving(true);
-      await updateProfile({
-        name,
-        phone,
-        address,
-        currentPassword: currentPassword || undefined,
-        newPassword: newPassword || undefined,
-      });
-      setCurrentPassword('');
-      setNewPassword('');
-      setEditing(false);
-      Alert.alert('Listo', 'Perfil actualizado correctamente');
+      await updateProfile({ name, phone, address, currentPassword: currentPassword || undefined, newPassword: newPassword || undefined });
+      setCurrentPassword(''); setNewPassword(''); setEditing(false);
+      Alert.alert('Listo', 'Perfil actualizado');
     } catch (e: unknown) {
       Alert.alert('Error', e instanceof Error ? e.message : 'No se pudo actualizar');
     } finally {
@@ -126,99 +119,54 @@ export default function ProfileScreen() {
       setSavingAlerts(true);
       await updateProfile({ emailAlerts: value });
     } catch (e: unknown) {
-      Alert.alert('Error', e instanceof Error ? e.message : 'No se pudo actualizar la preferencia');
+      Alert.alert('Error', e instanceof Error ? e.message : 'No se pudo actualizar');
     } finally {
       setSavingAlerts(false);
     }
   };
 
   const handleLogout = () => {
-    Alert.alert('Cerrar sesión', '¿Estás seguro de que quieres cerrar sesión?', [
+    Alert.alert('Cerrar sesión', '¿Estás seguro?', [
       { text: 'Cancelar', style: 'cancel' },
       { text: 'Cerrar sesión', style: 'destructive', onPress: logout },
     ]);
   };
 
-  const initials = user.name
-    .split(' ')
-    .map((w) => w[0])
-    .join('')
-    .toUpperCase()
-    .slice(0, 2);
+  const initials = user.name.split(' ').map((w) => w[0]).join('').toUpperCase().slice(0, 2);
 
   return (
     <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-        {/* Avatar */}
-        <View style={styles.avatarContainer}>
+        {/* Avatar header */}
+        <LinearGradient colors={Gradients.hero} style={styles.avatarHeader}>
           <View style={styles.avatar}>
             <Text style={styles.avatarText}>{initials}</Text>
           </View>
           <Text style={styles.displayName}>{user.name}</Text>
           <Text style={styles.displayEmail}>{user.email}</Text>
-        </View>
+        </LinearGradient>
 
-        {/* Info card */}
+        {/* Info */}
         <View style={styles.card}>
           <View style={styles.cardHeader}>
-            <Text style={styles.cardTitle}>Información de la cuenta</Text>
+            <Text style={styles.cardTitle}>Información de cuenta</Text>
             {!editing && (
               <TouchableOpacity onPress={() => setEditing(true)} style={styles.editBtn}>
-                <Ionicons name="pencil" size={16} color={Colors.primary} />
+                <Ionicons name="pencil" size={15} color={Colors.primary} />
                 <Text style={styles.editBtnText}>Editar</Text>
               </TouchableOpacity>
             )}
           </View>
-
           {editing ? (
             <>
-              <Input label="Nombre completo" value={name} onChangeText={setName} placeholder="Tu nombre completo" />
-              <Input
-                label="Teléfono"
-                value={phone}
-                onChangeText={setPhone}
-                placeholder="Número de teléfono"
-                keyboardType="phone-pad"
-              />
-              <Input
-                label="Dirección"
-                value={address}
-                onChangeText={setAddress}
-                placeholder="Dirección de envío"
-                multiline
-                numberOfLines={2}
-              />
-
+              <Input label="Nombre completo" value={name} onChangeText={setName} placeholder="Tu nombre" />
+              <Input label="Teléfono" value={phone} onChangeText={setPhone} placeholder="Número de teléfono" keyboardType="phone-pad" />
+              <Input label="Dirección" value={address} onChangeText={setAddress} placeholder="Dirección de envío" multiline numberOfLines={2} />
               <Text style={styles.sectionLabel}>Cambiar contraseña (opcional)</Text>
-              <Input
-                label="Contraseña actual"
-                value={currentPassword}
-                onChangeText={setCurrentPassword}
-                secureTextEntry
-                placeholder="Contraseña actual"
-              />
-              <Input
-                label="Nueva contraseña"
-                value={newPassword}
-                onChangeText={setNewPassword}
-                secureTextEntry
-                placeholder="Nueva contraseña"
-              />
-
+              <Input label="Contraseña actual" value={currentPassword} onChangeText={setCurrentPassword} secureTextEntry placeholder="Contraseña actual" />
+              <Input label="Nueva contraseña" value={newPassword} onChangeText={setNewPassword} secureTextEntry placeholder="Nueva contraseña" />
               <View style={styles.editActions}>
-                <Button
-                  title="Cancelar"
-                  variant="outline"
-                  onPress={() => {
-                    setEditing(false);
-                    setName(user.name);
-                    setPhone(user.phone);
-                    setAddress(user.address);
-                    setCurrentPassword('');
-                    setNewPassword('');
-                  }}
-                  style={styles.actionBtn}
-                />
+                <Button title="Cancelar" variant="outline" onPress={() => { setEditing(false); setName(user.name); setPhone(user.phone); setAddress(user.address); setCurrentPassword(''); setNewPassword(''); }} style={styles.actionBtn} />
                 <Button title="Guardar" onPress={handleSave} loading={saving} style={styles.actionBtn} />
               </View>
             </>
@@ -232,13 +180,50 @@ export default function ProfileScreen() {
           )}
         </View>
 
-        {/* Notificaciones */}
+        {/* Métodos de pago */}
+        <View style={styles.card}>
+          <View style={styles.cardHeader}>
+            <Text style={styles.cardTitle}>Métodos de pago</Text>
+            <View style={styles.cardTitleBadge}>
+              <Text style={styles.cardTitleBadgeText}>{paymentMethods.length}/5</Text>
+            </View>
+          </View>
+          {loadingCards ? (
+            <Text style={styles.cardSubtext}>Cargando...</Text>
+          ) : paymentMethods.length === 0 ? (
+            <View style={styles.noCards}>
+              <Ionicons name="card-outline" size={32} color={Colors.border} />
+              <Text style={styles.noCardsText}>No tienes tarjetas guardadas</Text>
+              <Text style={styles.noCardsSub}>Guarda una tarjeta al hacer tu próxima compra</Text>
+            </View>
+          ) : (
+            paymentMethods.map((m) => (
+              <View key={m.id} style={styles.savedCard}>
+                <View style={[styles.brandIcon, { backgroundColor: BRAND_COLORS[m.brand] || Colors.primary }]}>
+                  <Ionicons name="card" size={16} color="#fff" />
+                </View>
+                <View style={styles.savedCardInfo}>
+                  <Text style={styles.savedCardHolder}>{m.holderName}</Text>
+                  <Text style={styles.savedCardNum}>•••• •••• •••• {m.last4}</Text>
+                  <Text style={styles.savedCardExp}>
+                    {String(m.expiryMonth).padStart(2, '0')}/{String(m.expiryYear).slice(-2)}
+                  </Text>
+                </View>
+                <TouchableOpacity style={styles.deleteCardBtn} onPress={() => handleDeleteCard(m.id)}>
+                  <Ionicons name="trash-outline" size={18} color={Colors.danger} />
+                </TouchableOpacity>
+              </View>
+            ))
+          )}
+        </View>
+
+        {/* Alertas */}
         <View style={styles.card}>
           <View style={styles.alertRow}>
             <View style={styles.alertInfo}>
               <Text style={styles.cardTitle}>Alertas de ofertas</Text>
               <Text style={styles.alertSubtitle}>
-                Recibe por correo ofertas con más de 50% de descuento relacionadas a tus búsquedas.
+                Recibe por correo ofertas con más de 50% de descuento.
               </Text>
             </View>
             <Switch
@@ -246,40 +231,18 @@ export default function ProfileScreen() {
               onValueChange={toggleAlerts}
               disabled={savingAlerts}
               trackColor={{ true: Colors.primaryLight }}
-              thumbColor={user.emailAlerts ? Colors.primary : undefined}
+              thumbColor={user.emailAlerts ? Colors.primary : '#f4f3f4'}
             />
           </View>
         </View>
 
-        {/* Sentry — Panel de pruebas (LAB-04) */}
+        {/* Sentry */}
         <View style={styles.card}>
           <Text style={styles.cardTitle}>🔍 Sentry — Panel de pruebas</Text>
-          <Text style={[styles.alertSubtitle, { marginBottom: 14 }]}>
-            Botones para verificar la integración en el dashboard de Sentry.
-          </Text>
-
-          <TouchableOpacity style={[sentryStyles.btn, sentryStyles.btnDanger]} onPress={handleSimulateError}>
-            <Ionicons name="bug-outline" size={16} color="#fff" />
-            <Text style={sentryStyles.btnText}>Simular Error</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity style={[sentryStyles.btn, sentryStyles.btnInfo]} onPress={handleSendLogs}>
-            <Ionicons name="document-text-outline" size={16} color="#fff" />
-            <Text style={sentryStyles.btnText}>Enviar Logs</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity style={[sentryStyles.btn, sentryStyles.btnSuccess]} onPress={handleSendMetrics}>
-            <Ionicons name="bar-chart-outline" size={16} color="#fff" />
-            <Text style={sentryStyles.btnText}>Enviar Métricas</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity style={[sentryStyles.btn, sentryStyles.btnWarning]} onPress={handleStartTrace}>
-            <Ionicons name="timer-outline" size={16} color="#fff" />
-            <Text style={sentryStyles.btnText}>Iniciar Traza (User Login)</Text>
-          </TouchableOpacity>
+          <SentryBtnRow onError={handleSimulateError} onLogs={handleSendLogs} onMetrics={handleSendMetrics} onTrace={handleStartTrace} />
         </View>
 
-        {/* Cerrar sesión */}
+        {/* Logout */}
         <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout}>
           <Ionicons name="log-out-outline" size={20} color={Colors.danger} />
           <Text style={styles.logoutText}>Cerrar sesión</Text>
@@ -289,18 +252,38 @@ export default function ProfileScreen() {
   );
 }
 
+const SentryBtnRow = ({ onError, onLogs, onMetrics, onTrace }: {
+  onError: () => void; onLogs: () => void; onMetrics: () => void; onTrace: () => void;
+}) => (
+  <View style={{ gap: 10, marginTop: 12 }}>
+    {[
+      { label: 'Simular Error', icon: 'bug-outline', color: '#E53E3E', onPress: onError },
+      { label: 'Enviar Logs', icon: 'document-text-outline', color: '#3182CE', onPress: onLogs },
+      { label: 'Enviar Métricas', icon: 'bar-chart-outline', color: '#38A169', onPress: onMetrics },
+      { label: 'Iniciar Traza', icon: 'timer-outline', color: '#D69E2E', onPress: onTrace },
+    ].map((btn) => (
+      <TouchableOpacity
+        key={btn.label}
+        style={[sentryStyles.btn, { backgroundColor: btn.color }]}
+        onPress={btn.onPress}
+      >
+        <Ionicons name={btn.icon as React.ComponentProps<typeof Ionicons>['name']} size={16} color="#fff" />
+        <Text style={sentryStyles.btnText}>{btn.label}</Text>
+      </TouchableOpacity>
+    ))}
+  </View>
+);
+
 const ProfileRow = ({
-  icon,
-  label,
-  value,
+  icon, label, value,
 }: {
-  icon: React.ComponentProps<typeof Ionicons>['name'];
-  label: string;
-  value: string;
+  icon: React.ComponentProps<typeof Ionicons>['name']; label: string; value: string;
 }) => (
   <View style={rowStyles.row}>
-    <Ionicons name={icon} size={18} color={Colors.textSecondary} style={rowStyles.icon} />
-    <View>
+    <View style={rowStyles.iconWrap}>
+      <Ionicons name={icon} size={16} color={Colors.primary} />
+    </View>
+    <View style={{ flex: 1 }}>
       <Text style={rowStyles.label}>{label}</Text>
       <Text style={rowStyles.value}>{value}</Text>
     </View>
@@ -308,104 +291,90 @@ const ProfileRow = ({
 );
 
 const rowStyles = StyleSheet.create({
-  row: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 14, gap: 10 },
-  icon: { marginTop: 2 },
-  label: {
-    fontSize: 11,
-    color: Colors.textMuted,
-    fontWeight: '600',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
+  row: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 14, gap: 12 },
+  iconWrap: {
+    width: 34, height: 34, borderRadius: 10,
+    backgroundColor: Colors.background, alignItems: 'center', justifyContent: 'center',
   },
+  label: { fontSize: 11, color: Colors.textMuted, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 },
   value: { fontSize: 15, color: Colors.textPrimary, fontWeight: '500', marginTop: 2 },
 });
 
 const sentryStyles = StyleSheet.create({
   btn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    paddingVertical: 11,
-    borderRadius: 10,
-    marginBottom: 10,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    gap: 8, paddingVertical: 12, borderRadius: 12,
   },
-  btnText: { color: '#fff', fontWeight: '600', fontSize: 14 },
-  btnDanger: { backgroundColor: '#E53E3E' },
-  btnInfo: { backgroundColor: '#3182CE' },
-  btnSuccess: { backgroundColor: '#38A169' },
-  btnWarning: { backgroundColor: '#D69E2E' },
+  btnText: { color: '#fff', fontWeight: '700', fontSize: 14 },
 });
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
-  content: { padding: 20, paddingBottom: 40 },
+  content: { paddingBottom: 40 },
   centered: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 32,
-    backgroundColor: Colors.background,
+    flex: 1, alignItems: 'center', justifyContent: 'center',
+    padding: 32, backgroundColor: Colors.background,
   },
-  guestTitle: { fontSize: 22, fontWeight: '700', color: Colors.textPrimary, marginTop: 16 },
+  guestIcon: {
+    width: 90, height: 90, borderRadius: 28,
+    alignItems: 'center', justifyContent: 'center', marginBottom: 20,
+  },
+  guestTitle: { fontSize: 22, fontWeight: '800', color: Colors.textPrimary },
   guestSubtitle: { fontSize: 14, color: Colors.textSecondary, marginTop: 6, textAlign: 'center' },
   btn: { marginTop: 20, paddingHorizontal: 48 },
   registerLink: { marginTop: 14 },
   registerLinkText: { color: Colors.primary, fontSize: 14, fontWeight: '600' },
-  avatarContainer: { alignItems: 'center', marginBottom: 24 },
+  avatarHeader: { alignItems: 'center', paddingTop: 40, paddingBottom: 36, paddingHorizontal: 24 },
   avatar: {
-    width: 88,
-    height: 88,
-    borderRadius: 44,
-    backgroundColor: Colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 12,
+    width: 86, height: 86, borderRadius: 43,
+    backgroundColor: 'rgba(255,255,255,0.25)', alignItems: 'center', justifyContent: 'center',
+    marginBottom: 12, borderWidth: 3, borderColor: 'rgba(255,255,255,0.5)',
   },
   avatarText: { color: '#fff', fontSize: 28, fontWeight: '800' },
-  displayName: { fontSize: 20, fontWeight: '700', color: Colors.textPrimary },
-  displayEmail: { fontSize: 14, color: Colors.textSecondary, marginTop: 4 },
+  displayName: { fontSize: 20, fontWeight: '800', color: '#fff' },
+  displayEmail: { fontSize: 13, color: 'rgba(255,255,255,0.8)', marginTop: 4 },
   card: {
-    backgroundColor: Colors.surface,
-    borderRadius: 16,
-    padding: 20,
-    shadowColor: '#000',
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 3,
-    marginBottom: 20,
+    backgroundColor: Colors.surface, borderRadius: 20, padding: 20,
+    shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 10,
+    shadowOffset: { width: 0, height: 3 }, elevation: 3, marginHorizontal: 16, marginTop: 16,
   },
-  cardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 18,
-  },
+  cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
   cardTitle: { fontSize: 16, fontWeight: '700', color: Colors.textPrimary },
-  editBtn: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  editBtnText: { color: Colors.primary, fontWeight: '600', fontSize: 14 },
-  sectionLabel: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: Colors.textPrimary,
-    marginBottom: 10,
-    marginTop: 6,
+  cardTitleBadge: {
+    backgroundColor: Colors.background, borderRadius: 8,
+    paddingHorizontal: 8, paddingVertical: 3,
   },
+  cardTitleBadgeText: { fontSize: 12, color: Colors.textSecondary, fontWeight: '600' },
+  cardSubtext: { fontSize: 14, color: Colors.textMuted },
+  editBtn: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  editBtnText: { color: Colors.primary, fontWeight: '600', fontSize: 14 },
+  sectionLabel: { fontSize: 14, fontWeight: '700', color: Colors.textPrimary, marginBottom: 10, marginTop: 6 },
   editActions: { flexDirection: 'row', gap: 12, marginTop: 8 },
   actionBtn: { flex: 1 },
+  noCards: { alignItems: 'center', paddingVertical: 20, gap: 8 },
+  noCardsText: { fontSize: 15, fontWeight: '600', color: Colors.textSecondary },
+  noCardsSub: { fontSize: 13, color: Colors.textMuted, textAlign: 'center' },
+  savedCard: {
+    flexDirection: 'row', alignItems: 'center', gap: 12,
+    padding: 12, backgroundColor: Colors.background,
+    borderRadius: 14, marginBottom: 10, borderWidth: 1, borderColor: Colors.border,
+  },
+  brandIcon: {
+    width: 40, height: 40, borderRadius: 12,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  savedCardInfo: { flex: 1 },
+  savedCardHolder: { fontSize: 14, fontWeight: '700', color: Colors.textPrimary },
+  savedCardNum: { fontSize: 13, color: Colors.textSecondary, marginTop: 2 },
+  savedCardExp: { fontSize: 12, color: Colors.textMuted, marginTop: 1 },
+  deleteCardBtn: { padding: 6 },
   alertRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 16 },
   alertInfo: { flex: 1 },
   alertSubtitle: { fontSize: 13, color: Colors.textSecondary, marginTop: 4, lineHeight: 18 },
   logoutBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    padding: 14,
-    borderRadius: 12,
-    borderWidth: 1.5,
-    borderColor: Colors.danger,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    gap: 8, padding: 15, marginHorizontal: 16, marginTop: 16,
+    borderRadius: 14, borderWidth: 1.5, borderColor: Colors.danger,
   },
-  logoutText: { color: Colors.danger, fontWeight: '600', fontSize: 15 },
+  logoutText: { color: Colors.danger, fontWeight: '700', fontSize: 15 },
 });

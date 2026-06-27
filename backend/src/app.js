@@ -9,6 +9,7 @@ const cartRoutes = require('./routes/cart');
 const orderRoutes = require('./routes/orders');
 const couponRoutes = require('./routes/coupons');
 const reviewRoutes = require('./routes/reviews');
+const configRoutes = require('./routes/config');
 const { notFound, errorHandler } = require('./middleware/errorHandler');
 
 const app = express();
@@ -23,6 +24,7 @@ app.use('/api/cart', cartRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/coupons', couponRoutes);
 app.use('/api/reviews', reviewRoutes);
+app.use('/api/config', configRoutes);
 
 // Health check
 app.get('/api/health', (_req, res) => {

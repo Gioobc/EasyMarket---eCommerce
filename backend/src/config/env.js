@@ -9,6 +9,9 @@ const config = {
   env: process.env.NODE_ENV || 'development',
   port: Number(process.env.PORT) || 3001,
 
+  // Centros de recojo disponibles (pueden moverse a DB en el futuro).
+  pickupCenters: (process.env.PICKUP_CENTERS || 'Tienda Miraflores,Tienda San Isidro,Tienda Surco').split(',').map(s => s.trim()),
+
   // Conexión a MongoDB. La URI NUNCA va en el código: se lee de .env
   mongo: {
     uri: process.env.MONGODB_URI || '',

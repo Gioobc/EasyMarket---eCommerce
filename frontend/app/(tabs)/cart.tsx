@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -14,19 +15,22 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button } from '../../components/Button';
-import { Colors } from '../../constants/Colors';
+import { PaymentGateway } from '../../components/PaymentGateway';
+import { Colors, Gradients } from '../../constants/Colors';
 import { useAuth } from '../../context/AuthContext';
 import { useCart } from '../../context/CartContext';
 import {
+  AddPaymentMethodPayload,
   CouponValidation,
   DeliveryType,
   PaymentMethod,
+  PaymentMethodSaved,
+  authApi,
+  configApi,
   couponsApi,
   ordersApi,
 } from '../../services/api';
 import { formatMoney } from '../../utils/format';
-
-const PICKUP_CENTERS = ['Tienda Miraflores', 'Tienda San Isidro', 'Tienda Surco'];
 
 export default function CartScreen() {
   const { cart, loading, updateItem, removeItem, refreshCart } = useCart();
@@ -37,20 +41,32 @@ export default function CartScreen() {
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('card');
   const [deliveryType, setDeliveryType] = useState<DeliveryType>('delivery');
   const [address, setAddress] = useState(user?.address ?? '');
-  const [pickupCenter, setPickupCenter] = useState(PICKUP_CENTERS[0]);
+  const [pickupCenter, setPickupCenter] = useState('');
+  const [pickupCenters, setPickupCenters] = useState<string[]>([]);
+  const [savedCards, setSavedCards] = useState<PaymentMethodSaved[]>([]);
+  const [showGateway, setShowGateway] = useState(false);
 
   const [couponInput, setCouponInput] = useState('');
   const [coupon, setCoupon] = useState<CouponValidation | null>(null);
   const [couponError, setCouponError] = useState('');
   const [validatingCoupon, setValidatingCoupon] = useState(false);
 
-  // Estimación de totales según las opciones elegidas. El total definitivo lo
-  // calcula el backend al confirmar el pedido.
+  // Cargar centros de recojo y tarjetas guardadas desde la API
+  useEffect(() => {
+    configApi.getPickupCenters().then((centers) => {
+      setPickupCenters(centers);
+      if (centers.length > 0 && !pickupCenter) setPickupCenter(centers[0]);
+    }).catch(() => {});
+
+    if (user) {
+      authApi.getPaymentMethods().then(setSavedCards).catch(() => {});
+    }
+  }, [user]);
+
   const totals = useMemo(() => {
     const { subtotal, productDiscount, shipping: deliveryShipping } = cart.totals;
     const couponDiscount = coupon?.discount ?? 0;
-    const shipping =
-      deliveryType === 'pickup' || coupon?.type === 'shipping' ? 0 : deliveryShipping;
+    const shipping = deliveryType === 'pickup' || coupon?.type === 'shipping' ? 0 : deliveryShipping;
     const total = Math.max(0, subtotal - couponDiscount) + shipping;
     return { subtotal, productDiscount, couponDiscount, shipping, total };
   }, [cart.totals, coupon, deliveryType]);
@@ -76,40 +92,73 @@ export default function CartScreen() {
     setCouponError('');
   };
 
-  const handleCheckout = async () => {
+  const doCheckout = async () => {
+    const order = await ordersApi.checkout({
+      paymentMethod,
+      deliveryType,
+      shippingAddress: deliveryType === 'delivery' ? address.trim() : undefined,
+      pickupCenter: deliveryType === 'pickup' ? pickupCenter : undefined,
+      couponCode: coupon?.code,
+    });
+    await refreshCart();
+    removeCoupon();
+    return order;
+  };
+
+  const handlePay = async () => {
     if (deliveryType === 'delivery' && !address.trim()) {
       Alert.alert('Falta la dirección', 'Ingresa una dirección de envío para continuar.');
       return;
     }
+    if (paymentMethod === 'card') {
+      setShowGateway(true);
+      return;
+    }
+    // Contraentrega — cobro directo sin modal
     try {
       setCheckingOut(true);
-      const order = await ordersApi.checkout({
-        paymentMethod,
-        deliveryType,
-        shippingAddress: deliveryType === 'delivery' ? address.trim() : undefined,
-        pickupCenter: deliveryType === 'pickup' ? pickupCenter : undefined,
-        couponCode: coupon?.code,
-      });
-      await refreshCart();
-      removeCoupon();
+      const order = await doCheckout();
       Alert.alert('¡Pedido realizado!', 'Tu pedido fue confirmado. ¡Gracias por tu compra!', [
         { text: 'Ver pedido', onPress: () => router.push(`/order/${order.id}` as never) },
         { text: 'Seguir comprando', onPress: () => router.push('/(tabs)') },
       ]);
     } catch (e: unknown) {
-      Alert.alert('Error', e instanceof Error ? e.message : 'No se pudo completar el pago');
+      Alert.alert('Error', e instanceof Error ? e.message : 'No se pudo completar el pedido');
     } finally {
       setCheckingOut(false);
     }
   };
 
-  // --- Estados sin sesión / vacío / cargando ---
+  const handleGatewaySuccess = async (cardData: AddPaymentMethodPayload | null) => {
+    setShowGateway(false);
+    try {
+      setCheckingOut(true);
+      if (cardData) {
+        // Guardar tarjeta en paralelo (no bloqueante)
+        authApi.addPaymentMethod(cardData)
+          .then((m) => setSavedCards((prev) => [...prev, m]))
+          .catch(() => {});
+      }
+      const order = await doCheckout();
+      Alert.alert('¡Pedido realizado!', 'Tu pedido fue confirmado. ¡Gracias por tu compra!', [
+        { text: 'Ver pedido', onPress: () => router.push(`/order/${order.id}` as never) },
+        { text: 'Seguir comprando', onPress: () => router.push('/(tabs)') },
+      ]);
+    } catch (e: unknown) {
+      Alert.alert('Error', e instanceof Error ? e.message : 'No se pudo completar el pedido');
+    } finally {
+      setCheckingOut(false);
+    }
+  };
+
   if (!user) {
     return (
       <SafeAreaView style={styles.centered} edges={['bottom']}>
-        <Ionicons name="cart-outline" size={72} color={Colors.border} />
-        <Text style={styles.emptyTitle}>Tu carrito está vacío</Text>
-        <Text style={styles.emptySubtitle}>Inicia sesión para guardar artículos y pagar</Text>
+        <LinearGradient colors={Gradients.primary} style={styles.emptyIcon}>
+          <Ionicons name="cart-outline" size={40} color="#fff" />
+        </LinearGradient>
+        <Text style={styles.emptyTitle}>Inicia sesión para continuar</Text>
+        <Text style={styles.emptySubtitle}>Agrega productos y guarda tu carrito</Text>
         <Button title="Iniciar sesión" onPress={() => router.push('/auth/login')} style={styles.btn} />
       </SafeAreaView>
     );
@@ -126,7 +175,9 @@ export default function CartScreen() {
   if (cart.items.length === 0) {
     return (
       <SafeAreaView style={styles.centered} edges={['bottom']}>
-        <Ionicons name="cart-outline" size={72} color={Colors.border} />
+        <LinearGradient colors={Gradients.primary} style={styles.emptyIcon}>
+          <Ionicons name="cart-outline" size={40} color="#fff" />
+        </LinearGradient>
         <Text style={styles.emptyTitle}>Tu carrito está vacío</Text>
         <Text style={styles.emptySubtitle}>Agrega productos para comenzar</Text>
         <Button title="Buscar productos" onPress={() => router.push('/(tabs)')} style={styles.btn} />
@@ -138,58 +189,71 @@ export default function CartScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['bottom']}>
+      <PaymentGateway
+        visible={showGateway}
+        total={totals.total}
+        savedCards={savedCards}
+        onSuccess={handleGatewaySuccess}
+        onCancel={() => setShowGateway(false)}
+      />
+
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         {/* Ítems */}
+        <Text style={styles.sectionHeader}>
+          {itemCount} {itemCount === 1 ? 'artículo' : 'artículos'}
+        </Text>
         {cart.items.map((item) => (
           <View key={item.productId} style={styles.cartItem}>
             <Image source={{ uri: item.product.image }} style={styles.itemImage} resizeMode="cover" />
             <View style={styles.itemInfo}>
-              <Text style={styles.itemName} numberOfLines={2}>
-                {item.product.name}
-              </Text>
+              <Text style={styles.itemName} numberOfLines={2}>{item.product.name}</Text>
               <Text style={styles.itemPrice}>{formatMoney(item.product.finalPrice)}</Text>
               <View style={styles.qtyRow}>
                 <TouchableOpacity
                   style={styles.qtyBtn}
                   onPress={() =>
-                    item.quantity <= 1
-                      ? removeItem(item.productId)
-                      : updateItem(item.productId, item.quantity - 1)
+                    item.quantity <= 1 ? removeItem(item.productId) : updateItem(item.productId, item.quantity - 1)
                   }
                 >
-                  <Ionicons name="remove" size={16} color={Colors.primary} />
+                  <Ionicons name="remove" size={15} color={Colors.primary} />
                 </TouchableOpacity>
                 <Text style={styles.qtyText}>{item.quantity}</Text>
                 <TouchableOpacity
                   style={styles.qtyBtn}
                   onPress={() => updateItem(item.productId, item.quantity + 1)}
                 >
-                  <Ionicons name="add" size={16} color={Colors.primary} />
+                  <Ionicons name="add" size={15} color={Colors.primary} />
                 </TouchableOpacity>
               </View>
             </View>
-            <TouchableOpacity
-              style={styles.removeBtn}
-              onPress={() =>
-                Alert.alert('Eliminar artículo', '¿Eliminar este artículo del carrito?', [
-                  { text: 'Cancelar', style: 'cancel' },
-                  { text: 'Eliminar', style: 'destructive', onPress: () => removeItem(item.productId) },
-                ])
-              }
-            >
-              <Ionicons name="trash-outline" size={20} color={Colors.danger} />
-            </TouchableOpacity>
+            <View style={styles.itemRight}>
+              <Text style={styles.itemSubtotal}>{formatMoney(item.subtotal)}</Text>
+              <TouchableOpacity
+                style={styles.removeBtn}
+                onPress={() =>
+                  Alert.alert('Eliminar', '¿Eliminar este artículo del carrito?', [
+                    { text: 'Cancelar', style: 'cancel' },
+                    { text: 'Eliminar', style: 'destructive', onPress: () => removeItem(item.productId) },
+                  ])
+                }
+              >
+                <Ionicons name="trash-outline" size={18} color={Colors.danger} />
+              </TouchableOpacity>
+            </View>
           </View>
         ))}
 
         {/* Cupón */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Cupón de descuento</Text>
+          <View style={styles.sectionTitleRow}>
+            <Ionicons name="pricetag-outline" size={16} color={Colors.primary} />
+            <Text style={styles.sectionTitle}>Cupón de descuento</Text>
+          </View>
           {coupon ? (
             <View style={styles.couponApplied}>
-              <Ionicons name="pricetag" size={18} color={Colors.secondary} />
+              <Ionicons name="checkmark-circle" size={18} color={Colors.secondary} />
               <Text style={styles.couponAppliedText}>
-                {coupon.code} aplicado (−{formatMoney(coupon.discount)})
+                {coupon.code} — −{formatMoney(coupon.discount)}
               </Text>
               <TouchableOpacity onPress={removeCoupon}>
                 <Ionicons name="close-circle" size={20} color={Colors.textMuted} />
@@ -199,7 +263,7 @@ export default function CartScreen() {
             <View style={styles.couponRow}>
               <TextInput
                 style={styles.couponInput}
-                placeholder="Ingresa tu código"
+                placeholder="Código de cupón"
                 placeholderTextColor={Colors.textMuted}
                 autoCapitalize="characters"
                 value={couponInput}
@@ -221,28 +285,21 @@ export default function CartScreen() {
           {couponError ? <Text style={styles.errorText}>{couponError}</Text> : null}
         </View>
 
-        {/* Tipo de entrega */}
+        {/* Entrega */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Entrega</Text>
+          <View style={styles.sectionTitleRow}>
+            <Ionicons name="location-outline" size={16} color={Colors.primary} />
+            <Text style={styles.sectionTitle}>Tipo de entrega</Text>
+          </View>
           <View style={styles.segment}>
-            <SegmentButton
-              icon="bicycle-outline"
-              label="Delivery"
-              active={deliveryType === 'delivery'}
-              onPress={() => setDeliveryType('delivery')}
-            />
-            <SegmentButton
-              icon="storefront-outline"
-              label="Recojo en tienda"
-              active={deliveryType === 'pickup'}
-              onPress={() => setDeliveryType('pickup')}
-            />
+            <SegmentButton icon="bicycle-outline" label="Delivery" active={deliveryType === 'delivery'} onPress={() => setDeliveryType('delivery')} />
+            <SegmentButton icon="storefront-outline" label="Recojo en tienda" active={deliveryType === 'pickup'} onPress={() => setDeliveryType('pickup')} />
           </View>
 
           {deliveryType === 'delivery' ? (
             <TextInput
               style={styles.addressInput}
-              placeholder="Dirección de envío"
+              placeholder="Dirección de envío completa"
               placeholderTextColor={Colors.textMuted}
               value={address}
               onChangeText={setAddress}
@@ -250,17 +307,11 @@ export default function CartScreen() {
             />
           ) : (
             <View style={styles.pickupList}>
-              {PICKUP_CENTERS.map((center) => (
-                <TouchableOpacity
-                  key={center}
-                  style={styles.pickupOption}
-                  onPress={() => setPickupCenter(center)}
-                >
-                  <Ionicons
-                    name={pickupCenter === center ? 'radio-button-on' : 'radio-button-off'}
-                    size={20}
-                    color={pickupCenter === center ? Colors.primary : Colors.textMuted}
-                  />
+              {pickupCenters.map((center) => (
+                <TouchableOpacity key={center} style={styles.pickupOption} onPress={() => setPickupCenter(center)}>
+                  <View style={[styles.radioOuter, pickupCenter === center && styles.radioOuterActive]}>
+                    {pickupCenter === center && <View style={styles.radioInner} />}
+                  </View>
                   <Text style={styles.pickupText}>{center}</Text>
                 </TouchableOpacity>
               ))}
@@ -270,62 +321,64 @@ export default function CartScreen() {
 
         {/* Método de pago */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Método de pago</Text>
-          <View style={styles.segment}>
-            <SegmentButton
-              icon="card-outline"
-              label="Tarjeta"
-              active={paymentMethod === 'card'}
-              onPress={() => setPaymentMethod('card')}
-            />
-            <SegmentButton
-              icon="cash-outline"
-              label="Contraentrega"
-              active={paymentMethod === 'cash_on_delivery'}
-              onPress={() => setPaymentMethod('cash_on_delivery')}
-            />
+          <View style={styles.sectionTitleRow}>
+            <Ionicons name="card-outline" size={16} color={Colors.primary} />
+            <Text style={styles.sectionTitle}>Método de pago</Text>
           </View>
+          <View style={styles.segment}>
+            <SegmentButton icon="card-outline" label="Tarjeta" active={paymentMethod === 'card'} onPress={() => setPaymentMethod('card')} />
+            <SegmentButton icon="cash-outline" label="Contraentrega" active={paymentMethod === 'cash_on_delivery'} onPress={() => setPaymentMethod('cash_on_delivery')} />
+          </View>
+          {paymentMethod === 'card' && savedCards.length > 0 && (
+            <View style={styles.savedCardHint}>
+              <Ionicons name="shield-checkmark-outline" size={14} color={Colors.secondary} />
+              <Text style={styles.savedCardHintText}>
+                Tienes {savedCards.length} tarjeta{savedCards.length > 1 ? 's' : ''} guardada{savedCards.length > 1 ? 's' : ''}
+              </Text>
+            </View>
+          )}
         </View>
 
-        {/* Desglose */}
+        {/* Resumen */}
         <View style={styles.section}>
           <TotalRow label="Subtotal" value={formatMoney(totals.subtotal)} />
           {totals.productDiscount > 0 && (
-            <TotalRow label="Descuento productos" value={`− ${formatMoney(totals.productDiscount)}`} muted />
+            <TotalRow label="Ahorro en productos" value={`−${formatMoney(totals.productDiscount)}`} accent />
           )}
           {totals.couponDiscount > 0 && (
-            <TotalRow label={`Cupón ${coupon?.code ?? ''}`} value={`− ${formatMoney(totals.couponDiscount)}`} muted />
+            <TotalRow label={`Cupón ${coupon?.code ?? ''}`} value={`−${formatMoney(totals.couponDiscount)}`} accent />
           )}
-          <TotalRow
-            label="Envío"
-            value={totals.shipping ? formatMoney(totals.shipping) : 'Gratis'}
-          />
+          <TotalRow label="Envío" value={totals.shipping > 0 ? formatMoney(totals.shipping) : 'Gratis 🎉'} />
         </View>
       </ScrollView>
 
-      {/* Footer fijo */}
+      {/* Footer */}
       <View style={styles.footer}>
         <View style={styles.totalRow}>
-          <Text style={styles.totalLabel}>Total ({itemCount} artículos)</Text>
-          <Text style={styles.totalAmount}>{formatMoney(totals.total)}</Text>
+          <View>
+            <Text style={styles.totalLabel}>{itemCount} artículos</Text>
+            <Text style={styles.totalAmount}>{formatMoney(totals.total)}</Text>
+          </View>
+          <Button
+            title={
+              checkingOut
+                ? 'Procesando...'
+                : paymentMethod === 'card'
+                ? 'Pagar con tarjeta'
+                : 'Confirmar pedido'
+            }
+            onPress={handlePay}
+            loading={checkingOut}
+            style={styles.payBtn}
+          />
         </View>
-        <Button
-          title={checkingOut ? 'Procesando pedido...' : 'Pagar'}
-          onPress={handleCheckout}
-          loading={checkingOut}
-          fullWidth
-        />
       </View>
     </SafeAreaView>
   );
 }
 
-// --- Subcomponentes ---
 const SegmentButton = ({
-  icon,
-  label,
-  active,
-  onPress,
+  icon, label, active, onPress,
 }: {
   icon: React.ComponentProps<typeof Ionicons>['name'];
   label: string;
@@ -335,143 +388,129 @@ const SegmentButton = ({
   <TouchableOpacity
     style={[styles.segmentBtn, active && styles.segmentBtnActive]}
     onPress={onPress}
-    activeOpacity={0.8}
+    activeOpacity={0.85}
   >
-    <Ionicons name={icon} size={18} color={active ? '#fff' : Colors.textSecondary} />
-    <Text style={[styles.segmentText, active && styles.segmentTextActive]}>{label}</Text>
+    {active ? (
+      <LinearGradient colors={Gradients.primary} style={styles.segmentGradient}>
+        <Ionicons name={icon} size={16} color="#fff" />
+        <Text style={[styles.segmentText, styles.segmentTextActive]}>{label}</Text>
+      </LinearGradient>
+    ) : (
+      <>
+        <Ionicons name={icon} size={16} color={Colors.textSecondary} />
+        <Text style={styles.segmentText}>{label}</Text>
+      </>
+    )}
   </TouchableOpacity>
 );
 
-const TotalRow = ({ label, value, muted }: { label: string; value: string; muted?: boolean }) => (
+const TotalRow = ({ label, value, accent }: { label: string; value: string; accent?: boolean }) => (
   <View style={styles.breakdownRow}>
     <Text style={styles.breakdownLabel}>{label}</Text>
-    <Text style={[styles.breakdownValue, muted && { color: Colors.secondary }]}>{value}</Text>
+    <Text style={[styles.breakdownValue, accent && { color: Colors.secondary }]}>{value}</Text>
   </View>
 );
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
-  scroll: { padding: 16, gap: 12 },
+  scroll: { padding: 16, gap: 14, paddingBottom: 8 },
   centered: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 32,
-    backgroundColor: Colors.background,
+    flex: 1, alignItems: 'center', justifyContent: 'center',
+    padding: 32, backgroundColor: Colors.background,
   },
-  emptyTitle: { fontSize: 20, fontWeight: '700', color: Colors.textPrimary, marginTop: 16 },
+  emptyIcon: {
+    width: 88, height: 88, borderRadius: 28,
+    alignItems: 'center', justifyContent: 'center', marginBottom: 20,
+  },
+  emptyTitle: { fontSize: 20, fontWeight: '800', color: Colors.textPrimary },
   emptySubtitle: { fontSize: 14, color: Colors.textSecondary, marginTop: 6, textAlign: 'center' },
   btn: { marginTop: 20, paddingHorizontal: 40 },
+  sectionHeader: {
+    fontSize: 13, fontWeight: '700', color: Colors.textMuted,
+    textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4,
+  },
   cartItem: {
-    flexDirection: 'row',
-    backgroundColor: Colors.surface,
-    borderRadius: 14,
-    padding: 12,
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOpacity: 0.05,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 2,
+    flexDirection: 'row', backgroundColor: Colors.surface,
+    borderRadius: 18, padding: 14, alignItems: 'flex-start',
+    shadowColor: Colors.primary, shadowOpacity: 0.07, shadowRadius: 10,
+    shadowOffset: { width: 0, height: 3 }, elevation: 3, gap: 12,
   },
-  itemImage: { width: 72, height: 72, borderRadius: 10, backgroundColor: Colors.border },
-  itemInfo: { flex: 1, marginLeft: 12 },
+  itemImage: { width: 72, height: 72, borderRadius: 12, backgroundColor: Colors.borderLight },
+  itemInfo: { flex: 1 },
   itemName: { fontSize: 14, fontWeight: '600', color: Colors.textPrimary, marginBottom: 4 },
-  itemPrice: { fontSize: 15, fontWeight: '700', color: Colors.primary, marginBottom: 8 },
-  qtyRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  itemPrice: { fontSize: 15, fontWeight: '800', color: Colors.primary, marginBottom: 10 },
+  qtyRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   qtyBtn: {
-    width: 28,
-    height: 28,
-    borderRadius: 8,
-    borderWidth: 1.5,
-    borderColor: Colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
+    width: 28, height: 28, borderRadius: 8, borderWidth: 1.5,
+    borderColor: Colors.primary, alignItems: 'center', justifyContent: 'center',
   },
-  qtyText: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: Colors.textPrimary,
-    minWidth: 20,
-    textAlign: 'center',
-  },
-  removeBtn: { padding: 6, marginLeft: 8 },
+  qtyText: { fontSize: 15, fontWeight: '700', color: Colors.textPrimary, minWidth: 20, textAlign: 'center' },
+  itemRight: { alignItems: 'flex-end', justifyContent: 'space-between', paddingVertical: 2 },
+  itemSubtotal: { fontSize: 14, fontWeight: '800', color: Colors.textPrimary },
+  removeBtn: { padding: 4 },
   section: {
-    backgroundColor: Colors.surface,
-    borderRadius: 14,
-    padding: 16,
-    gap: 10,
+    backgroundColor: Colors.surface, borderRadius: 18, padding: 16, gap: 12,
+    shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 8,
+    shadowOffset: { width: 0, height: 2 }, elevation: 2,
   },
+  sectionTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   sectionTitle: { fontSize: 15, fontWeight: '700', color: Colors.textPrimary },
-  couponRow: { flexDirection: 'row', gap: 8 },
+  couponRow: { flexDirection: 'row', gap: 10 },
   couponInput: {
-    flex: 1,
-    borderWidth: 1.5,
-    borderColor: Colors.border,
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    fontSize: 14,
-    color: Colors.textPrimary,
+    flex: 1, borderWidth: 1.5, borderColor: Colors.border, borderRadius: 12,
+    paddingHorizontal: 14, paddingVertical: 11, fontSize: 14, color: Colors.textPrimary,
   },
   couponBtn: {
-    backgroundColor: Colors.primary,
-    borderRadius: 10,
-    paddingHorizontal: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
+    backgroundColor: Colors.primary, borderRadius: 12,
+    paddingHorizontal: 18, alignItems: 'center', justifyContent: 'center',
   },
   couponBtnText: { color: '#fff', fontWeight: '700', fontSize: 14 },
   couponApplied: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    backgroundColor: '#ECFDF5',
-    borderRadius: 10,
-    padding: 12,
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    backgroundColor: '#ECFDF5', borderRadius: 12, padding: 12,
   },
   couponAppliedText: { flex: 1, color: Colors.secondary, fontWeight: '600', fontSize: 14 },
   errorText: { color: Colors.danger, fontSize: 13 },
   segment: { flexDirection: 'row', gap: 10 },
   segmentBtn: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    paddingVertical: 12,
-    borderRadius: 10,
-    borderWidth: 1.5,
-    borderColor: Colors.border,
+    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    gap: 6, paddingVertical: 13, borderRadius: 12, borderWidth: 1.5, borderColor: Colors.border, overflow: 'hidden',
   },
-  segmentBtnActive: { backgroundColor: Colors.primary, borderColor: Colors.primary },
+  segmentBtnActive: { borderColor: Colors.primary },
+  segmentGradient: {
+    position: 'absolute', inset: 0, flexDirection: 'row',
+    alignItems: 'center', justifyContent: 'center', gap: 6, padding: 13,
+  },
   segmentText: { fontSize: 13, fontWeight: '600', color: Colors.textSecondary },
   segmentTextActive: { color: '#fff' },
   addressInput: {
-    borderWidth: 1.5,
-    borderColor: Colors.border,
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    fontSize: 14,
-    color: Colors.textPrimary,
-    minHeight: 60,
-    textAlignVertical: 'top',
+    borderWidth: 1.5, borderColor: Colors.border, borderRadius: 12,
+    paddingHorizontal: 14, paddingVertical: 11, fontSize: 14, color: Colors.textPrimary,
+    minHeight: 64, textAlignVertical: 'top',
   },
-  pickupList: { gap: 8 },
-  pickupOption: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  pickupText: { fontSize: 14, color: Colors.textPrimary },
+  pickupList: { gap: 10 },
+  pickupOption: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  radioOuter: {
+    width: 20, height: 20, borderRadius: 10, borderWidth: 2,
+    borderColor: Colors.border, alignItems: 'center', justifyContent: 'center',
+  },
+  radioOuterActive: { borderColor: Colors.primary },
+  radioInner: { width: 10, height: 10, borderRadius: 5, backgroundColor: Colors.primary },
+  pickupText: { fontSize: 14, color: Colors.textPrimary, fontWeight: '500' },
+  savedCardHint: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    backgroundColor: '#ECFDF5', borderRadius: 10, padding: 10,
+  },
+  savedCardHintText: { fontSize: 13, color: Colors.secondary, fontWeight: '600' },
   breakdownRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   breakdownLabel: { fontSize: 14, color: Colors.textSecondary },
   breakdownValue: { fontSize: 14, fontWeight: '600', color: Colors.textPrimary },
   footer: {
-    backgroundColor: Colors.surface,
-    padding: 20,
-    borderTopWidth: 1,
-    borderTopColor: Colors.border,
-    gap: 14,
+    backgroundColor: Colors.surface, padding: 20,
+    borderTopWidth: 1, borderTopColor: Colors.border,
   },
   totalRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  totalLabel: { fontSize: 15, color: Colors.textSecondary, fontWeight: '500' },
-  totalAmount: { fontSize: 22, fontWeight: '800', color: Colors.primary },
+  totalLabel: { fontSize: 13, color: Colors.textMuted },
+  totalAmount: { fontSize: 24, fontWeight: '900', color: Colors.textPrimary },
+  payBtn: { minWidth: 180 },
 });

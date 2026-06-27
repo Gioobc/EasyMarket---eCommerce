@@ -1,8 +1,10 @@
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import {
   Alert,
+  Animated,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -14,7 +16,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button } from '../../components/Button';
 import { Input } from '../../components/Input';
-import { Colors } from '../../constants/Colors';
+import { Colors, Gradients } from '../../constants/Colors';
 import { useAuth } from '../../context/AuthContext';
 
 export default function LoginScreen() {
@@ -25,9 +27,22 @@ export default function LoginScreen() {
   const [loading, setLoading] = useState(false);
   const [showPwd, setShowPwd] = useState(false);
 
+  const shakeAnim = useRef(new Animated.Value(0)).current;
+
+  const shake = () => {
+    Animated.sequence([
+      Animated.timing(shakeAnim, { toValue: 10, duration: 60, useNativeDriver: true }),
+      Animated.timing(shakeAnim, { toValue: -10, duration: 60, useNativeDriver: true }),
+      Animated.timing(shakeAnim, { toValue: 8, duration: 60, useNativeDriver: true }),
+      Animated.timing(shakeAnim, { toValue: -8, duration: 60, useNativeDriver: true }),
+      Animated.timing(shakeAnim, { toValue: 0, duration: 60, useNativeDriver: true }),
+    ]).start();
+  };
+
   const handleLogin = async () => {
     if (!email.trim() || !password) {
-      Alert.alert('Validación', 'Por favor ingresa tu correo y contraseña');
+      shake();
+      Alert.alert('Campos requeridos', 'Por favor ingresa tu correo y contraseña');
       return;
     }
     try {
@@ -35,25 +50,32 @@ export default function LoginScreen() {
       await login(email.trim().toLowerCase(), password);
       router.replace('/(tabs)');
     } catch (e: unknown) {
-      Alert.alert('Error', e instanceof Error ? e.message : 'Error al iniciar sesión');
+      shake();
+      Alert.alert('Error al iniciar sesión', e instanceof Error ? e.message : 'Credenciales inválidas');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
         <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
-          <View style={styles.header}>
-            <View style={styles.logoBox}>
-              <Ionicons name="storefront" size={40} color="#fff" />
-            </View>
-            <Text style={styles.title}>EasyMarket</Text>
-            <Text style={styles.subtitle}>Inicia sesión en tu cuenta</Text>
-          </View>
 
-          <View style={styles.form}>
+          {/* Hero */}
+          <LinearGradient colors={Gradients.hero} style={styles.hero}>
+            <View style={styles.logoWrap}>
+              <Ionicons name="storefront" size={38} color="#fff" />
+            </View>
+            <Text style={styles.heroTitle}>EasyMarket</Text>
+            <Text style={styles.heroSub}>Tu tienda favorita en un solo lugar</Text>
+          </LinearGradient>
+
+          {/* Form card */}
+          <Animated.View style={[styles.card, { transform: [{ translateX: shakeAnim }] }]}>
+            <Text style={styles.cardTitle}>Iniciar sesión</Text>
+            <Text style={styles.cardSub}>Bienvenido de vuelta 👋</Text>
+
             <Input
               label="Correo electrónico"
               value={email}
@@ -70,7 +92,7 @@ export default function LoginScreen() {
                 onChangeText={setPassword}
                 placeholder="Tu contraseña"
                 secureTextEntry={!showPwd}
-                style={{ paddingRight: 44 }}
+                style={{ paddingRight: 48 }}
               />
               <TouchableOpacity style={styles.eyeBtn} onPress={() => setShowPwd((v) => !v)}>
                 <Ionicons
@@ -81,7 +103,14 @@ export default function LoginScreen() {
               </TouchableOpacity>
             </View>
 
-            <Button title="Iniciar sesión" onPress={handleLogin} loading={loading} fullWidth style={styles.submitBtn} />
+            <Button
+              title="Iniciar sesión"
+              onPress={handleLogin}
+              loading={loading}
+              fullWidth
+              size="lg"
+              style={styles.submitBtn}
+            />
 
             <View style={styles.divider}>
               <View style={styles.dividerLine} />
@@ -89,12 +118,16 @@ export default function LoginScreen() {
               <View style={styles.dividerLine} />
             </View>
 
-            <TouchableOpacity style={styles.registerLink} onPress={() => router.replace('/auth/register')}>
-              <Text style={styles.registerText}>
-                ¿No tienes una cuenta? <Text style={styles.registerBold}>Crear una cuenta</Text>
+            <TouchableOpacity
+              style={styles.altLink}
+              onPress={() => router.replace('/auth/register')}
+            >
+              <Text style={styles.altText}>
+                ¿No tienes cuenta?{' '}
+                <Text style={styles.altBold}>Crear cuenta gratis</Text>
               </Text>
             </TouchableOpacity>
-          </View>
+          </Animated.View>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -102,37 +135,72 @@ export default function LoginScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.background },
-  scroll: { flexGrow: 1, padding: 24, justifyContent: 'center' },
-  header: { alignItems: 'center', marginBottom: 36 },
-  logoBox: {
+  container: { flex: 1, backgroundColor: Colors.primary },
+  scroll: { flexGrow: 1 },
+  hero: {
+    alignItems: 'center',
+    paddingTop: 48,
+    paddingBottom: 52,
+    paddingHorizontal: 24,
+  },
+  logoWrap: {
     width: 80,
     height: 80,
-    borderRadius: 20,
-    backgroundColor: Colors.primary,
+    borderRadius: 24,
+    backgroundColor: 'rgba(255,255,255,0.2)',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 16,
+    borderWidth: 2,
+    borderColor: 'rgba(255,255,255,0.3)',
   },
-  title: { fontSize: 30, fontWeight: '800', color: Colors.textPrimary },
-  subtitle: { fontSize: 15, color: Colors.textSecondary, marginTop: 4 },
-  form: {
+  heroTitle: {
+    fontSize: 32,
+    fontWeight: '900',
+    color: '#fff',
+    letterSpacing: -0.5,
+  },
+  heroSub: {
+    fontSize: 15,
+    color: 'rgba(255,255,255,0.8)',
+    marginTop: 6,
+  },
+  card: {
     backgroundColor: Colors.surface,
-    borderRadius: 20,
-    padding: 24,
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
+    flex: 1,
+    padding: 28,
+    paddingTop: 32,
     shadowColor: '#000',
-    shadowOpacity: 0.06,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 3,
+    shadowOpacity: 0.12,
+    shadowRadius: 20,
+    shadowOffset: { width: 0, height: -6 },
+    elevation: 8,
+  },
+  cardTitle: {
+    fontSize: 24,
+    fontWeight: '800',
+    color: Colors.textPrimary,
+    marginBottom: 4,
+  },
+  cardSub: {
+    fontSize: 14,
+    color: Colors.textSecondary,
+    marginBottom: 24,
   },
   passwordWrapper: { position: 'relative' },
-  eyeBtn: { position: 'absolute', right: 14, top: 36 },
-  submitBtn: { marginTop: 8 },
-  divider: { flexDirection: 'row', alignItems: 'center', marginVertical: 20, gap: 10 },
+  eyeBtn: { position: 'absolute', right: 14, top: 34 },
+  submitBtn: { marginTop: 6 },
+  divider: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 22,
+    gap: 12,
+  },
   dividerLine: { flex: 1, height: 1, backgroundColor: Colors.border },
   dividerText: { color: Colors.textMuted, fontSize: 13 },
-  registerLink: { alignItems: 'center' },
-  registerText: { color: Colors.textSecondary, fontSize: 14 },
-  registerBold: { color: Colors.primary, fontWeight: '700' },
+  altLink: { alignItems: 'center' },
+  altText: { color: Colors.textSecondary, fontSize: 14 },
+  altBold: { color: Colors.primary, fontWeight: '700' },
 });

@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
@@ -14,7 +15,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button } from '../../components/Button';
 import { StarRating } from '../../components/StarRating';
-import { Colors } from '../../constants/Colors';
+import { Colors, Gradients } from '../../constants/Colors';
 import { useAuth } from '../../context/AuthContext';
 import { useCart } from '../../context/CartContext';
 import { Product, ProductReview, productsApi, reviewsApi } from '../../services/api';
@@ -34,44 +35,34 @@ export default function ProductDetailScreen() {
   useEffect(() => {
     let active = true;
     setLoading(true);
-    productsApi
-      .getById(id)
+    productsApi.getById(id)
       .then((p) => active && setProduct(p))
       .catch(() => active && setProduct(null))
       .finally(() => active && setLoading(false));
-
-    reviewsApi
-      .forProduct(id)
+    reviewsApi.forProduct(id)
       .then((r) => active && setReviews(r))
       .catch(() => active && setReviews([]));
-
-    return () => {
-      active = false;
-    };
+    return () => { active = false; };
   }, [id]);
 
   const handleAddToCart = async () => {
     if (!user) {
-      Alert.alert(
-        'Se requiere inicio de sesión',
-        'Por favor, inicia sesión para agregar artículos a tu carrito.',
-        [
-          { text: 'Cancelar', style: 'cancel' },
-          { text: 'Iniciar sesión', onPress: () => router.push('/auth/login') },
-        ]
-      );
+      Alert.alert('Inicia sesión', 'Para agregar productos al carrito necesitas una cuenta.', [
+        { text: 'Cancelar', style: 'cancel' },
+        { text: 'Iniciar sesión', onPress: () => router.push('/auth/login') },
+      ]);
       return;
     }
     if (!product) return;
     try {
       setAddingToCart(true);
       await addItem(product.id, qty);
-      Alert.alert('¡Agregado al carrito!', `${product.name} (×${qty}) agregado a tu carrito.`, [
+      Alert.alert('¡Agregado!', `${product.name} (×${qty}) en tu carrito.`, [
         { text: 'Seguir comprando', style: 'cancel' },
         { text: 'Ver carrito', onPress: () => router.push('/(tabs)/cart') },
       ]);
     } catch (e: unknown) {
-      Alert.alert('Error', e instanceof Error ? e.message : 'No se pudo agregar el artículo');
+      Alert.alert('Error', e instanceof Error ? e.message : 'No se pudo agregar');
     } finally {
       setAddingToCart(false);
     }
@@ -96,85 +87,99 @@ export default function ProductDetailScreen() {
   }
 
   const hasDiscount = product.discount > 0;
+  const savingAmount = hasDiscount ? product.price - product.finalPrice : 0;
 
   return (
     <SafeAreaView style={styles.container} edges={['bottom']}>
       <ScrollView showsVerticalScrollIndicator={false}>
-        <View>
+        {/* Imagen */}
+        <View style={styles.imageContainer}>
           <Image source={{ uri: product.image }} style={styles.image} resizeMode="contain" />
           {hasDiscount && (
-            <View style={styles.discountBadge}>
+            <LinearGradient colors={['#DC2626', '#EF4444']} style={styles.discountBadge}>
               <Text style={styles.discountBadgeText}>-{product.discount}%</Text>
+            </LinearGradient>
+          )}
+          {product.stock === 0 && (
+            <View style={styles.outOfStockBadge}>
+              <Text style={styles.outOfStockText}>Agotado</Text>
             </View>
           )}
         </View>
 
         <View style={styles.content}>
+          {/* Categoría y rating */}
           <View style={styles.categoryRow}>
-            <Text style={styles.category}>{product.category}</Text>
-            <View style={styles.ratingRow}>
-              <Ionicons name="star" size={14} color={Colors.star} />
+            <View style={styles.categoryBadge}>
+              <Text style={styles.category}>{product.category}</Text>
+            </View>
+            <View style={styles.ratingBadge}>
+              <Ionicons name="star" size={13} color={Colors.star} />
               <Text style={styles.rating}>
-                {product.rating} {product.ratingCount ? `(${product.ratingCount})` : ''}
+                {product.rating.toFixed(1)}
+                {product.ratingCount ? ` (${product.ratingCount})` : ''}
               </Text>
             </View>
           </View>
 
           <Text style={styles.name}>{product.name}</Text>
 
-          <View style={styles.priceRow}>
-            <Text style={[styles.price, hasDiscount && { color: Colors.discount }]}>
-              {formatMoney(product.finalPrice)}
-            </Text>
-            {hasDiscount && <Text style={styles.oldPrice}>{formatMoney(product.price)}</Text>}
+          {/* Precios */}
+          <View style={styles.priceSection}>
+            <View style={styles.priceRow}>
+              <Text style={styles.price}>{formatMoney(product.finalPrice)}</Text>
+              {hasDiscount && <Text style={styles.oldPrice}>{formatMoney(product.price)}</Text>}
+            </View>
+            {hasDiscount && (
+              <View style={styles.savingBadge}>
+                <Ionicons name="trending-down" size={13} color={Colors.secondary} />
+                <Text style={styles.savingText}>Ahorras {formatMoney(savingAmount)}</Text>
+              </View>
+            )}
           </View>
 
           <Text style={styles.description}>{product.description}</Text>
 
-          <View style={styles.stockRow}>
+          {/* Stock */}
+          <View style={[styles.stockRow, { backgroundColor: product.stock > 0 ? '#ECFDF5' : Colors.dangerLight }]}>
             <Ionicons
               name={product.stock > 0 ? 'checkmark-circle' : 'close-circle'}
               size={16}
               color={product.stock > 0 ? Colors.secondary : Colors.danger}
             />
-            <Text
-              style={[
-                styles.stockText,
-                { color: product.stock > 0 ? Colors.secondary : Colors.danger },
-              ]}
-            >
-              {product.stock > 0 ? `${product.stock} disponibles` : 'Agotado'}
+            <Text style={[styles.stockText, { color: product.stock > 0 ? Colors.secondary : Colors.danger }]}>
+              {product.stock > 0 ? `${product.stock} unidades disponibles` : 'Sin stock'}
             </Text>
           </View>
 
-          <View style={styles.qtySection}>
-            <Text style={styles.qtyLabel}>Cantidad</Text>
-            <View style={styles.qtyRow}>
-              <TouchableOpacity
-                style={styles.qtyBtn}
-                onPress={() => setQty((q) => Math.max(1, q - 1))}
-              >
-                <Ionicons name="remove" size={20} color={Colors.primary} />
-              </TouchableOpacity>
-              <Text style={styles.qtyText}>{qty}</Text>
-              <TouchableOpacity
-                style={styles.qtyBtn}
-                onPress={() => setQty((q) => Math.min(product.stock, q + 1))}
-                disabled={qty >= product.stock}
-              >
-                <Ionicons
-                  name="add"
-                  size={20}
-                  color={qty >= product.stock ? Colors.textMuted : Colors.primary}
-                />
-              </TouchableOpacity>
+          {/* Cantidad */}
+          {product.stock > 0 && (
+            <View style={styles.qtySection}>
+              <Text style={styles.qtyLabel}>Cantidad</Text>
+              <View style={styles.qtyControls}>
+                <TouchableOpacity
+                  style={[styles.qtyBtn, qty <= 1 && styles.qtyBtnDisabled]}
+                  onPress={() => setQty((q) => Math.max(1, q - 1))}
+                  disabled={qty <= 1}
+                >
+                  <Ionicons name="remove" size={20} color={qty <= 1 ? Colors.textMuted : Colors.primary} />
+                </TouchableOpacity>
+                <Text style={styles.qtyText}>{qty}</Text>
+                <TouchableOpacity
+                  style={[styles.qtyBtn, qty >= product.stock && styles.qtyBtnDisabled]}
+                  onPress={() => setQty((q) => Math.min(product.stock, q + 1))}
+                  disabled={qty >= product.stock}
+                >
+                  <Ionicons name="add" size={20} color={qty >= product.stock ? Colors.textMuted : Colors.primary} />
+                </TouchableOpacity>
+              </View>
             </View>
-          </View>
+          )}
 
           {/* Reseñas */}
           {reviews.length > 0 && (
             <View style={styles.reviewsSection}>
-              <Text style={styles.reviewsTitle}>Reseñas ({reviews.length})</Text>
+              <Text style={styles.reviewsTitle}>Reseñas de clientes</Text>
               {reviews.slice(0, 5).map((r, idx) => (
                 <View key={idx} style={styles.reviewCard}>
                   <View style={styles.reviewHeader}>
@@ -189,18 +194,21 @@ export default function ProductDetailScreen() {
         </View>
       </ScrollView>
 
+      {/* Footer */}
       <View style={styles.footer}>
         <View style={styles.subtotalRow}>
-          <Text style={styles.subtotalLabel}>Subtotal</Text>
-          <Text style={styles.subtotalAmount}>{formatMoney(product.finalPrice * qty)}</Text>
+          <View>
+            <Text style={styles.subtotalLabel}>Subtotal ({qty} ud.)</Text>
+            <Text style={styles.subtotalAmount}>{formatMoney(product.finalPrice * qty)}</Text>
+          </View>
+          <Button
+            title="Agregar al carrito"
+            onPress={handleAddToCart}
+            loading={addingToCart}
+            disabled={product.stock === 0}
+            size="lg"
+          />
         </View>
-        <Button
-          title="Agregar al carrito"
-          onPress={handleAddToCart}
-          loading={addingToCart}
-          disabled={product.stock === 0}
-          fullWidth
-        />
       </View>
     </SafeAreaView>
   );
@@ -210,101 +218,70 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
   centered: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32 },
   errorText: { fontSize: 18, color: Colors.textSecondary, marginTop: 12 },
-  image: { width: '100%', height: 360, backgroundColor: Colors.border, alignSelf: 'center' },
+  imageContainer: { backgroundColor: Colors.surface, position: 'relative' },
+  image: { width: '100%', height: 320, backgroundColor: Colors.borderLight },
   discountBadge: {
-    position: 'absolute',
-    top: 16,
-    left: 16,
-    backgroundColor: Colors.discount,
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    position: 'absolute', top: 16, left: 16,
+    borderRadius: 10, paddingHorizontal: 14, paddingVertical: 7,
   },
-  discountBadgeText: { color: '#fff', fontSize: 16, fontWeight: '800' },
+  discountBadgeText: { color: '#fff', fontSize: 16, fontWeight: '900' },
+  outOfStockBadge: {
+    position: 'absolute', top: 16, right: 16,
+    backgroundColor: 'rgba(0,0,0,0.6)', borderRadius: 8,
+    paddingHorizontal: 12, paddingVertical: 6,
+  },
+  outOfStockText: { color: '#fff', fontWeight: '700', fontSize: 13 },
   content: { padding: 20 },
-  categoryRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
+  categoryRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 },
+  categoryBadge: {
+    backgroundColor: '#EEF2FF', borderRadius: 8,
+    paddingHorizontal: 10, paddingVertical: 4,
   },
-  category: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: Colors.primary,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
+  category: { fontSize: 12, fontWeight: '700', color: Colors.primary, textTransform: 'uppercase', letterSpacing: 0.5 },
+  ratingBadge: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    backgroundColor: '#FFFBEB', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4,
   },
-  ratingRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  rating: { fontSize: 14, fontWeight: '600', color: Colors.textSecondary },
-  name: {
-    fontSize: 22,
-    fontWeight: '800',
-    color: Colors.textPrimary,
-    lineHeight: 28,
-    marginBottom: 10,
+  rating: { fontSize: 13, fontWeight: '700', color: Colors.warning },
+  name: { fontSize: 22, fontWeight: '900', color: Colors.textPrimary, lineHeight: 28, marginBottom: 14, letterSpacing: -0.3 },
+  priceSection: { marginBottom: 16 },
+  priceRow: { flexDirection: 'row', alignItems: 'flex-end', gap: 12, marginBottom: 6 },
+  price: { fontSize: 28, fontWeight: '900', color: Colors.primary, letterSpacing: -0.5 },
+  oldPrice: { fontSize: 17, color: Colors.textMuted, textDecorationLine: 'line-through', marginBottom: 4 },
+  savingBadge: {
+    flexDirection: 'row', alignItems: 'center', gap: 5,
+    backgroundColor: '#ECFDF5', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 5, alignSelf: 'flex-start',
   },
-  priceRow: { flexDirection: 'row', alignItems: 'flex-end', gap: 10, marginBottom: 14 },
-  price: { fontSize: 26, fontWeight: '800', color: Colors.primary },
-  oldPrice: {
-    fontSize: 17,
-    color: Colors.textMuted,
-    textDecorationLine: 'line-through',
-    marginBottom: 3,
+  savingText: { fontSize: 13, color: Colors.secondary, fontWeight: '600' },
+  description: { fontSize: 15, color: Colors.textSecondary, lineHeight: 23, marginBottom: 16 },
+  stockRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    padding: 12, borderRadius: 12, marginBottom: 20,
   },
-  description: { fontSize: 15, color: Colors.textSecondary, lineHeight: 22, marginBottom: 16 },
-  stockRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 20 },
   stockText: { fontSize: 14, fontWeight: '600' },
-  qtySection: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  qtySection: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 28 },
   qtyLabel: { fontSize: 16, fontWeight: '700', color: Colors.textPrimary },
-  qtyRow: { flexDirection: 'row', alignItems: 'center', gap: 16 },
+  qtyControls: { flexDirection: 'row', alignItems: 'center', gap: 18 },
   qtyBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    borderWidth: 1.5,
-    borderColor: Colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
+    width: 40, height: 40, borderRadius: 12, borderWidth: 1.5,
+    borderColor: Colors.primary, alignItems: 'center', justifyContent: 'center',
   },
-  qtyText: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: Colors.textPrimary,
-    minWidth: 24,
-    textAlign: 'center',
-  },
-  reviewsSection: { marginTop: 28 },
-  reviewsTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: Colors.textPrimary,
-    marginBottom: 12,
-  },
+  qtyBtnDisabled: { borderColor: Colors.border },
+  qtyText: { fontSize: 20, fontWeight: '800', color: Colors.textPrimary, minWidth: 28, textAlign: 'center' },
+  reviewsSection: { marginTop: 4 },
+  reviewsTitle: { fontSize: 16, fontWeight: '800', color: Colors.textPrimary, marginBottom: 14, letterSpacing: -0.2 },
   reviewCard: {
-    backgroundColor: Colors.surface,
-    borderRadius: 12,
-    padding: 12,
-    marginBottom: 10,
-    borderWidth: 1,
-    borderColor: Colors.border,
+    backgroundColor: Colors.surface, borderRadius: 14, padding: 14,
+    marginBottom: 10, borderWidth: 1, borderColor: Colors.border,
   },
-  reviewHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 6,
-  },
+  reviewHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
   reviewDate: { fontSize: 12, color: Colors.textMuted },
   reviewComment: { fontSize: 14, color: Colors.textSecondary, lineHeight: 20 },
   footer: {
-    backgroundColor: Colors.surface,
-    padding: 20,
-    borderTopWidth: 1,
-    borderTopColor: Colors.border,
-    gap: 12,
+    backgroundColor: Colors.surface, padding: 20,
+    borderTopWidth: 1, borderTopColor: Colors.border,
   },
   subtotalRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  subtotalLabel: { fontSize: 15, color: Colors.textSecondary },
-  subtotalAmount: { fontSize: 20, fontWeight: '800', color: Colors.primary },
+  subtotalLabel: { fontSize: 12, color: Colors.textMuted, fontWeight: '500' },
+  subtotalAmount: { fontSize: 22, fontWeight: '900', color: Colors.textPrimary, marginTop: 2 },
 });

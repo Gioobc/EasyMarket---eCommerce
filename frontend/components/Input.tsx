@@ -9,14 +9,21 @@ interface InputProps extends TextInputProps {
 
 export const Input: React.FC<InputProps> = ({ label, error, style, onFocus, onBlur, ...props }) => {
   const borderAnim = useRef(new Animated.Value(0)).current;
+  const bgAnim = useRef(new Animated.Value(0)).current;
 
   const handleFocus = (e: Parameters<NonNullable<TextInputProps['onFocus']>>[0]) => {
-    Animated.timing(borderAnim, { toValue: 1, duration: 180, useNativeDriver: false }).start();
+    Animated.parallel([
+      Animated.timing(borderAnim, { toValue: 1, duration: 200, useNativeDriver: false }),
+      Animated.timing(bgAnim, { toValue: 1, duration: 200, useNativeDriver: false }),
+    ]).start();
     onFocus?.(e);
   };
 
   const handleBlur = (e: Parameters<NonNullable<TextInputProps['onBlur']>>[0]) => {
-    Animated.timing(borderAnim, { toValue: 0, duration: 180, useNativeDriver: false }).start();
+    Animated.parallel([
+      Animated.timing(borderAnim, { toValue: 0, duration: 200, useNativeDriver: false }),
+      Animated.timing(bgAnim, { toValue: 0, duration: 200, useNativeDriver: false }),
+    ]).start();
     onBlur?.(e);
   };
 
@@ -27,10 +34,15 @@ export const Input: React.FC<InputProps> = ({ label, error, style, onFocus, onBl
         outputRange: [Colors.border, Colors.primary],
       });
 
+  const backgroundColor = bgAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [Colors.surface, Colors.surfaceTinted],
+  });
+
   return (
     <View style={styles.container}>
       {label ? <Text style={styles.label}>{label}</Text> : null}
-      <Animated.View style={[styles.inputWrapper, { borderColor }]}>
+      <Animated.View style={[styles.inputWrapper, { borderColor, backgroundColor }]}>
         <TextInput
           style={[styles.input, style]}
           placeholderTextColor={Colors.textMuted}
@@ -45,25 +57,25 @@ export const Input: React.FC<InputProps> = ({ label, error, style, onFocus, onBl
 };
 
 const styles = StyleSheet.create({
-  container: { marginBottom: 14 },
+  container: { marginBottom: 16 },
   label: {
-    fontSize: 13,
-    fontWeight: '600',
+    fontSize: 12,
+    fontWeight: '800',
     color: Colors.textSecondary,
-    marginBottom: 6,
-    letterSpacing: 0.2,
+    marginBottom: 7,
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
   },
   inputWrapper: {
     borderWidth: 1.5,
-    borderRadius: 12,
-    backgroundColor: Colors.surface,
+    borderRadius: 14,
     overflow: 'hidden',
   },
   input: {
-    paddingHorizontal: 14,
-    paddingVertical: 13,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
     fontSize: 15,
     color: Colors.textPrimary,
   },
-  error: { color: Colors.danger, fontSize: 12, marginTop: 4, fontWeight: '500' },
+  error: { color: Colors.danger, fontSize: 12, marginTop: 5, fontWeight: '600' },
 });

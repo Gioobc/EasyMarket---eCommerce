@@ -52,14 +52,15 @@ export const Button: React.FC<ButtonProps> = ({
         onPressOut={handlePressOut}
         onPress={onPress}
         disabled={isDisabled}
+        style={isDisabled ? { opacity: 0.4 } : undefined}
         {...props}
       >
         {isPrimary ? (
           <LinearGradient
-            colors={isDisabled ? ['#C4B5FD', '#C4B5FD'] : Gradients.primary}
+            colors={Gradients.primary}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 0 }}
-            style={[styles.base, sizeStyle, styles.gradientInner]}
+            style={[styles.base, sizeStyle, styles.primaryShadow]}
           >
             {loading ? (
               <ActivityIndicator color="#fff" />
@@ -76,7 +77,6 @@ export const Button: React.FC<ButtonProps> = ({
               variant === 'outline' && styles.outline,
               variant === 'danger' && styles.danger,
               variant === 'ghost' && styles.ghost,
-              isDisabled && styles.disabled,
             ]}
           >
             {loading ? (
@@ -104,16 +104,22 @@ export const Button: React.FC<ButtonProps> = ({
 
 const styles = StyleSheet.create({
   base: {
-    borderRadius: 14,
+    borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
     flexDirection: 'row',
     gap: 8,
   },
-  gradientInner: {},
-  sm: { paddingVertical: 9, paddingHorizontal: 18 },
-  md: { paddingVertical: 14, paddingHorizontal: 24 },
-  lg: { paddingVertical: 17, paddingHorizontal: 32 },
+  primaryShadow: {
+    shadowColor: Colors.primaryDark,
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 4,
+  },
+  sm: { paddingVertical: 10, paddingHorizontal: 20 },
+  md: { paddingVertical: 15, paddingHorizontal: 28 },
+  lg: { paddingVertical: 18, paddingHorizontal: 36 },
   secondary: { backgroundColor: Colors.secondary },
   outline: {
     backgroundColor: 'transparent',
@@ -121,10 +127,9 @@ const styles = StyleSheet.create({
     borderColor: Colors.primary,
   },
   danger: { backgroundColor: Colors.danger },
-  ghost: { backgroundColor: Colors.background },
+  ghost: { backgroundColor: Colors.surfaceTinted },
   fullWidth: { width: '100%' },
-  disabled: { opacity: 0.5 },
-  text: { color: '#fff', fontWeight: '700', letterSpacing: 0.2 },
+  text: { color: '#fff', fontWeight: '800', letterSpacing: 0.1 },
   textSm: { fontSize: 14 },
   textMd: { fontSize: 16 },
   textLg: { fontSize: 17 },

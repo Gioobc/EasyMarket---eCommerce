@@ -27,19 +27,28 @@ export default function TabsLayout() {
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: Colors.primary,
-        tabBarInactiveTintColor: Colors.textMuted,
+        tabBarActiveTintColor: Colors.tabBarActive,
+        tabBarInactiveTintColor: Colors.tabBarInactive,
         tabBarStyle: {
-          borderTopColor: Colors.border,
-          backgroundColor: Colors.surface,
-          height: 62,
-          paddingBottom: 8,
-          paddingTop: 6,
+          backgroundColor: Colors.tabBar,
+          borderTopWidth: 0,
+          height: 68,
+          paddingBottom: 10,
+          paddingTop: 8,
+          shadowColor: '#000',
+          shadowOpacity: 0.3,
+          shadowRadius: 12,
+          shadowOffset: { width: 0, height: -4 },
+          elevation: 20,
         },
-        tabBarLabelStyle: { fontSize: 11, fontWeight: '600' },
-        headerStyle: { backgroundColor: Colors.primary },
-        headerTintColor: '#fff',
-        headerTitleStyle: { fontWeight: '800', fontSize: 18 },
+        tabBarLabelStyle: {
+          fontSize: 10,
+          fontWeight: '700',
+          letterSpacing: 0.3,
+        },
+        headerStyle: { backgroundColor: Colors.primaryDark },
+        headerTintColor: '#FFFFFF',
+        headerTitleStyle: { fontWeight: '900', fontSize: 17, letterSpacing: -0.3 },
       }}
     >
       <Tabs.Screen
@@ -111,7 +120,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: -5,
     right: -9,
-    backgroundColor: Colors.danger,
+    backgroundColor: Colors.accent,
     borderRadius: 9,
     minWidth: 17,
     height: 17,

@@ -421,7 +421,7 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     gap: 12,
   },
-  savedCardSelected: { borderColor: Colors.primary, backgroundColor: '#EEF2FF' },
+  savedCardSelected: { borderColor: Colors.primary, backgroundColor: Colors.surfaceTinted },
   cardBrandDot: {
     width: 38,
     height: 38,

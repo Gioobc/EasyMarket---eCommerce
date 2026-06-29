@@ -1,10 +1,20 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Image, StyleSheet, Text, View } from 'react-native';
 import { useAuth } from '../../context/AuthContext';
 import { useCart } from '../../context/CartContext';
 import { Colors } from '../../constants/Colors';
+
+function HeaderLogo() {
+  return (
+    <Image
+      source={require('../../assets/images/logo-full.png')}
+      style={{ width: 130, height: 36 }}
+      resizeMode="contain"
+    />
+  );
+}
 
 function CartTabIcon({ color, focused }: { color: string; focused: boolean }) {
   const { itemCount } = useCart();
@@ -54,7 +64,8 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: 'EasyMarket',
+          headerTitle: () => <HeaderLogo />,
+          headerTitleAlign: 'center',
           tabBarLabel: 'Inicio',
           tabBarIcon: ({ color, focused }) => (
             <Ionicons name={focused ? 'home' : 'home-outline'} size={24} color={color} />

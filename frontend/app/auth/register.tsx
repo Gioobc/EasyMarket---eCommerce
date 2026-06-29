@@ -4,6 +4,7 @@ import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
   Alert,
+  Image,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -70,9 +71,11 @@ export default function RegisterScreen() {
 
           {/* Hero mini */}
           <LinearGradient colors={Gradients.hero} style={styles.hero}>
-            <View style={styles.logoWrap}>
-              <Ionicons name="person-add" size={32} color="#fff" />
-            </View>
+            <Image
+              source={require('../../assets/images/logo.png')}
+              style={styles.logoImage}
+              resizeMode="contain"
+            />
             <Text style={styles.heroTitle}>Crear cuenta</Text>
             <Text style={styles.heroSub}>Únete a miles de compradores</Text>
           </LinearGradient>
@@ -174,15 +177,17 @@ export default function RegisterScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.primary },
   scroll: { flexGrow: 1 },
+  logoImage: { width: 80, height: 80, marginBottom: 10 },
   hero: {
     alignItems: 'center',
-    paddingTop: 36,
+    paddingTop: 32,
     paddingBottom: 44,
     paddingHorizontal: 24,
   },
   logoWrap: {
     width: 70,
     height: 70,
+    display: 'none',
     borderRadius: 22,
     backgroundColor: 'rgba(255,255,255,0.2)',
     alignItems: 'center',

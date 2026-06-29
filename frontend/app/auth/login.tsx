@@ -5,6 +5,7 @@ import React, { useRef, useState } from 'react';
 import {
   Alert,
   Animated,
+  Image,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -64,10 +65,11 @@ export default function LoginScreen() {
 
           {/* Hero */}
           <LinearGradient colors={Gradients.hero} style={styles.hero}>
-            <View style={styles.logoWrap}>
-              <Ionicons name="storefront" size={38} color="#fff" />
-            </View>
-            <Text style={styles.heroTitle}>EasyMarket</Text>
+            <Image
+              source={require('../../assets/images/logo-full.png')}
+              style={styles.logoImage}
+              resizeMode="contain"
+            />
             <Text style={styles.heroSub}>Tu tienda favorita en un solo lugar</Text>
           </LinearGradient>
 
@@ -139,31 +141,20 @@ const styles = StyleSheet.create({
   scroll: { flexGrow: 1 },
   hero: {
     alignItems: 'center',
-    paddingTop: 48,
-    paddingBottom: 52,
+    paddingTop: 40,
+    paddingBottom: 48,
     paddingHorizontal: 24,
   },
-  logoWrap: {
-    width: 80,
-    height: 80,
-    borderRadius: 24,
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 16,
-    borderWidth: 2,
-    borderColor: 'rgba(255,255,255,0.3)',
-  },
-  heroTitle: {
-    fontSize: 32,
-    fontWeight: '900',
-    color: '#fff',
-    letterSpacing: -0.5,
+  logoImage: {
+    width: 220,
+    height: 160,
+    marginBottom: 4,
   },
   heroSub: {
-    fontSize: 15,
-    color: 'rgba(255,255,255,0.8)',
-    marginTop: 6,
+    fontSize: 14,
+    color: 'rgba(255,255,255,0.7)',
+    marginTop: 4,
+    letterSpacing: 0.2,
   },
   card: {
     backgroundColor: Colors.surface,

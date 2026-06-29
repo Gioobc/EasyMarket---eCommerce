@@ -4,10 +4,12 @@ require('dotenv').config();
 
 const { createServer } = require('http');
 const { Server } = require('socket.io');
+const bcrypt = require('bcryptjs');
 const app = require('./app');
 const config = require('./config/env');
 const { connectDB, mongoose } = require('./config/db');
 const stockEmitter = require('./services/stockEmitter');
+const User = require('./models/User');
 
 const httpServer = createServer(app);
 const io = new Server(httpServer, {
@@ -24,9 +26,26 @@ stockEmitter.on('stock_update', ({ productId, stock }) => {
   io.to(`product_${productId}`).emit('stock_updated', { productId, stock });
 });
 
+const ensureAdmin = async () => {
+  const { email, password } = config.admin;
+  if (!email || !password) return;
+  const exists = await User.findOne({ email: email.toLowerCase() });
+  if (exists) {
+    if (exists.role !== 'admin') {
+      await User.updateOne({ _id: exists._id }, { role: 'admin' });
+      console.log(`[admin] Rol actualizado a admin: ${email}`);
+    }
+    return;
+  }
+  const hashed = await bcrypt.hash(password, config.bcrypt.saltRounds);
+  await User.create({ name: 'Administrador', email: email.toLowerCase(), password: hashed, role: 'admin' });
+  console.log(`[admin] Usuario administrador creado: ${email}`);
+};
+
 const start = async () => {
   try {
     await connectDB();
+    await ensureAdmin();
 
     httpServer.listen(config.port, () => {
       console.log(`EasyMarket backend en http://localhost:${config.port} [${config.env}]`);

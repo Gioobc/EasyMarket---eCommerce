@@ -1,100 +1,103 @@
 # EasyMarket — eCommerce
 
-## Requisitos previos
-- Node.js 18+
+EasyMarket es una app de comercio electrónico hecha con un backend en Node.js + Express, base de datos MongoDB y una interfaz móvil en Expo/React Native. 📱🛒
+
+## ✨ Funcionalidades
+
+### 👤 Usuario
+- Registro e inicio de sesión.
+- Perfil editable con cambio de contraseña.
+- Catálogo de productos con búsqueda, filtros y ordenamiento.
+- Detalle de producto con reseñas, stock y favoritos.
+- Lista de deseos.
+- Carrito de compras con cálculo de totales.
+- Flujo de pago simulado.
+- Historial de pedidos y descarga de comprobantes.
+- Notificaciones y alertas del usuario.
+
+### 🛠️ Administración
+- Panel de administración protegido por rol.
+- Estadísticas generales del sistema.
+- Gestión de productos.
+- Gestión de pedidos y cambio de estado.
+- Gestión de usuarios y roles.
+- Visualización de inventario y actividad.
+
+### 🔌 Backend
+- API REST con Express.
+- Persistencia en MongoDB Atlas.
+- Autenticación con JWT.
+- Gestión de cupones, reseñas, carrito, wishlist, pedidos y recomendaciones.
+- Socket.IO para eventos en tiempo real relacionados con stock.
+
+## 🧰 Tecnologías
+
+- Node.js
+- Express
+- MongoDB y Mongoose
+- JWT
+- Socket.IO
+- Expo / React Native
+- TypeScript en el frontend
+
+## 📁 Estructura del proyecto
+
+```text
+backend/   -> API, modelos, rutas, servicios y configuración del servidor
+frontend/  -> App Expo, pantallas, componentes, contexto y servicios HTTP
+```
+
+## ✅ Requisitos previos
+
+- Node.js 18 o superior
 - npm
-- Expo Go instalado en tu celular (o emulador Android/iOS)
+- Cuenta de MongoDB Atlas
+- Expo Go en el teléfono si quieres probar sin compilar
 
----
+## 🚀 Cómo ejecutar el sistema en local
 
-## Backend
+### 1. Instalar dependencias
 
 ```bash
 cd backend
 npm install
-npm start
+
+cd ../frontend
+npm install
 ```
 
-El servidor corre en: `http://localhost:3001`
+### 2. Levantar el backend
 
----
+```bash
+cd backend
+npm run dev
+```
 
-## Frontend
+El backend queda disponible en `http://localhost:3001`.
+
+Verifica que responda:
+
+```bash
+http://localhost:3001/api/health
+```
+
+### 3. Levantar el frontend
 
 ```bash
 cd frontend
-npm install
 npx expo start
 ```
 
-Luego en la terminal aparece un QR. Escanealo con la app **Expo Go** desde tu celular.
-
-### Otras opciones de arranque
+Luego escanea el QR con Expo Go. También puedes ejecutar:
 
 ```bash
-# Solo para Android (emulador o USB):
 npx expo start --android
-
-# Solo para iOS (solo Mac):
 npx expo start --ios
-
-# En el navegador web:
 npx expo start --web
 ```
 
----
+## 📝 Notas rápidas
 
-## Orden de arranque recomendado
-
-1. Primero levanta el **backend** (`npm run dev`)
-2. Luego arranca el **frontend** (`npx expo start`)
-3. Abre Expo Go en tu celular y escanea el QR
-
----
-
-## Generación de APK e IPA con EAS
-
-La app móvil vive en `frontend/` y ya quedó preparada para builds con Expo Application Services.
-
-### Configuración inicial
-
-```bash
-cd frontend
-npm install
-npx eas build:configure
-```
-
-Ese primer paso vincula el proyecto con Expo y crea la referencia necesaria para los builds en la nube.
-
-### Configuración de la API para APK
-
-El APK no puede usar `localhost` para llegar al backend. Debes definir la URL real del servidor en `frontend/.env`:
-
-```bash
-EXPO_PUBLIC_API_URL=http://192.168.1.50:3001
-```
-
-Usa una IP accesible desde el teléfono o emulador. Si usas un emulador Android, `10.0.2.2` también funciona.
-
-Si cambias esa URL, vuelve a generar el APK con EAS.
-
-### Builds disponibles
-
-```bash
-# APK para Android
-npm run eas:build:android
-
-# IPA para iOS
-npm run eas:build:ios
-
-# Ambos desde el mismo perfil
-npm run eas:build:all
-```
-
-Los builds usan el perfil `release` definido en `frontend/eas.json`.
-
-### GitHub Actions
-
-El workflow `.github/workflows/eas-build.yml` permite lanzar builds manuales desde GitHub.
-
-Antes de usarlo, crea el secret `EXPO_TOKEN` en el repositorio.
+- Si cambias la URL del backend, debes actualizar `frontend/.env`.
+- No subas `.env` al repositorio.
+- Para pruebas locales, backend y frontend deben estar corriendo al mismo tiempo.

@@ -1,5 +1,8 @@
 {
   "devDependencies": {
     "sharp": "^0.35.2"
+  },
+  "dependencies": {
+    "expo": "^57.0.0"
   }
 }

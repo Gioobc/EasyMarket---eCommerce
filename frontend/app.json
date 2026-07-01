@@ -16,14 +16,21 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.easymarket.app",
-      "icon": "./assets/images/icon.png"
+      "icon": "./assets/images/icon.png",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "package": "com.easymarket.app",
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#052E1C"
-      }
+      },
+      "permissions": [
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION"
+      ]
     },
     "web": {
       "bundler": "metro",
@@ -32,18 +39,16 @@
     },
     "plugins": [
       "expo-router",
-      "expo-location",
-      [
-        "@sentry/react-native/expo",
-        {
-          "organization": "ronceros-moviles",
-          "project": "easymarket",
-          "url": "https://sentry.io/"
-        }
-      ]
+      "expo-location"
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "b557e930-6d53-4111-8f69-7a875bcef9d4"
+      }
     }
   }
 }

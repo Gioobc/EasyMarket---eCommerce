@@ -1,0 +1,6 @@
+{
+  "dependencies": {
+    "easymarket-frontend": "file:..",
+    "web-streams-polyfill": "^3.2.1"
+  }
+}

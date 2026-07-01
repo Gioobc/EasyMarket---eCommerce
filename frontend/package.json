@@ -6,7 +6,10 @@
     "start": "expo start",
     "android": "expo start --android",
     "ios": "expo start --ios",
-    "web": "expo start --web"
+    "web": "expo start --web",
+    "eas:build:android": "npx eas build --platform android --profile release",
+    "eas:build:ios": "npx eas build --platform ios --profile release",
+    "eas:build:all": "npx eas build --platform all --profile release"
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.3",
@@ -35,6 +38,7 @@
   "devDependencies": {
     "@babel/core": "^7.24.0",
     "@types/react": "~19.1.10",
+    "eas-cli": "^20.5.0",
     "typescript": "^5.3.3"
   }
 }

@@ -4,7 +4,18 @@ import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 import { Platform } from 'react-native';
 
+const normalizeApiUrl = (url: string): string => {
+  const trimmed = url.trim().replace(/\/$/, '');
+  return trimmed.endsWith('/api') ? trimmed : `${trimmed}/api`;
+};
+
 const getApiBase = (): string => {
+  const configuredUrl =
+    process.env.EXPO_PUBLIC_API_URL ??
+    (Constants.expoConfig as { extra?: { apiUrl?: string } } | null)?.extra?.apiUrl;
+
+  if (configuredUrl) return normalizeApiUrl(configuredUrl);
+
   if (Platform.OS === 'web') return 'http://localhost:3001/api';
   // En Expo Go, hostUri tiene la forma "192.168.x.x:8081"
   const hostUri: string | undefined =
